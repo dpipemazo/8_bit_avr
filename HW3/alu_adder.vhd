@@ -82,7 +82,7 @@ entity  alu_adder  is
         sub  :  in std_logic;      -- Add or subtract
         A, B :  in  std_logic_vector((bitsize - 1) downto 0);     -- Performing X - Y
         S    :  out  std_logic_vector((bitsize - 1) downto 0);    -- sum out
-        Co   :  out  std_logic                                    -- carry out
+        carry:  out  std_logic_vector(bitsize downto 0)           -- carry out
 
     );
 
@@ -99,8 +99,7 @@ architecture  dataflow  of  alu_adder  is
             Cout  :  out  std_logic       --  carry out output
         );
     end  component;
-
-    signal  carry : std_logic_vector(bitsize downto 0);   -- intermediate carries
+    
     signal  internal_Y : std_logic_vector( (bitsize - 1) downto 0);
 
 begin

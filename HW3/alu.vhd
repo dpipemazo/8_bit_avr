@@ -55,7 +55,7 @@ signal swap_result: std_logic_vector(7 downto 0);
 signal bitset_result : std_logic_vector(7 downto 0);
 
 -- Carry Flags
-signal adder_carry : std_logic; 
+signal adder_carries : std_logic_vector(8 downto 0); 
 signal shift_carry : std_logic;
 
 -- Translated operand B
@@ -65,7 +65,7 @@ signal internal_op_b : std_logic_vector(7 downto 0);
 signal adder_a_input : std_logic_vector(7 downto 0);
 signal adder_b_input : std_logic_vector(7 downto 0); 
 signal adder_sub_input : std_logic;
-signal adder_Carry_input : std_logic;
+signal adder_carry_input : std_logic;
 
 
 
@@ -100,7 +100,7 @@ begin
             A <= adder_a_input;              -- map A to A
             B <= adder_b_input;              -- map B to B
             S <= adder_result;          -- map the result to adder_result
-            Cout <= adder_carry    -- map the carry out to a temporary signal
+            Cout <= adder_carries    -- map the carry out to a temporary signal
             );
 
     -- Map the correct input to the adder
@@ -214,11 +214,17 @@ begin
                     <= swap_result  when(   std_match(IR, OpSWP)),
                     <= bitset_result when(  std_match(IR, OpBLD)),
 
+    --
+    --
+    -- FLAGZ
+    --
+    --
+
 
     --
-    -- MAP INDIVIDUAL CARRY FLAGS TO INTERNAL STATUS REGISTER IN MUX
+    -- CARRY FLAG
     --
-    internal_status_reg(0)  <= adder_carry when(std_match(IR, OpADD) or 
+    internal_status_reg(0)  <= adder_carries(8) when(std_match(IR, OpADD) or 
                                                 std_match(IR, OpADC) or 
                                                 std_match(IR, OpSUB) or 
                                                 std_match(IR, OpSBC) or 
@@ -233,7 +239,89 @@ begin
                                                 std_match(IR, OpCOM)),
                             <= shift_carry when(std_match(IR, OpROR) or
                                                 std_match(IR, OpASR) or
-                                                std_match(IR, OpLSR)),
+                                                std_match(IR, OpLSR)) else
+                            <= internal_status_reg(0);
+
+    --
+    -- ZERO FLAG
+    --
+    internal_status_reg(1) <= internal_status_reg(1) when(
+                                                std_match(IR, OpBCLR) or
+                                                std_match(IR, OpBLD) or
+                                                std_match(IR, OpBST) or
+                                                std_match(IR, OpBSET) or
+                                                std_match(IR, OpSWAP)) else
+                            not OR_REDUCE(internal_result);
+
+    --
+    -- NEGATIVE FLAG
+    --
+    internal_status_reg(2) <=   internal_status_reg(2) when(
+                                                std_match(IR, OpBCLR) or
+                                                std_match(IR, OpBLD) or
+                                                std_match(IR, OpBST) or
+                                                std_match(IR, OpBSET) or
+                                                std_match(IR, OpSWAP)) else
+                                internal_result(7);
+
+    --
+    -- SIGNED OVERFLOW FLAG
+    --
+    internal_status_reg(3) <=   internal_status_reg(3) when(
+                                                std_match(IR, OpBCLR) or
+                                                std_match(IR, OpBLD) or
+                                                std_match(IR, OpBST) or
+                                                std_match(IR, OpBSET) or
+                                                std_match(IR, OpSWAP)), 
+     internal_status_reg(2) xor internal_status_reg(0) when(
+                                                std_match(IR, OpROR) or
+                                                std_match(IR, OpASR) or
+                                                std_match(IR, OpLSR)), 
+                                '0' when(       std_match(IR, OpAND) or 
+                                                std_match(IR, OpANDI) or
+                                                std_match(IR, OpCOM) or
+                                                std_match(IR, OpEOR) or
+                                                std_match(IR, OpOR) or
+                                                std_match(IR, OpORI)) else
+                                carries(8) xor carries(7);
+
+    --
+    -- SIGN BIT
+    --
+    internal_status_reg(4) <=   internal_status_reg(4) when(
+                                                std_match(IR, OpBCLR) or
+                                                std_match(IR, OpBLD) or
+                                                std_match(IR, OpBST) or
+                                                std_match(IR, OpBSET) or
+                                                std_match(IR, OpSWAP)) else
+                                internal_status_reg(2) xor internal_status_reg(3);
+
+    --
+    -- HALF CARRY
+    --
+    internal_status_reg(5) <= carries(4) when ( std_match(IR, OpADC) or
+                                                std_match(IR, OpADD) or
+                                                std_match(IR, OpCP) or
+                                                std_match(IR, OpCPC) or
+                                                std_match(IR, OpCPI) or
+                                                std_match(IR, OpNEG) or
+                                                std_match(IR, OpSBC) or
+                                                std_match(IR, OpSBCI) or
+                                                std_match(IR, OpSUB) or
+                                                std_match(IR, OpSUBI)) else
+                              internal_status_reg(5);
+
+    --
+    -- WHEN TO WRITE RESULT
+    --
+    write_reg <=    '0' when(   std_match(IR, OpBCLR) or
+                                std_match(IR, OpBSET) or
+                                std_match(IR, OpBST) or
+                                std_match(IR, OpCP) or
+                                std_match(IR, OpCPC) or
+                                std_match(IR, OpCPI)) else
+                    '1';
+
 
 
 
