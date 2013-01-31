@@ -56,7 +56,7 @@ package opcodes is
    constant OpSBIW   :  opcode_word := "10010111--------";   -- SBIW Rdl, K
    constant OpSUB    :  opcode_word := "000110----------";   -- SUB Rd, Rr
    constant OpSUBI   :  opcode_word := "0101------------";   -- SUBI Rd, K
-   constant OpSWAP   :  opcode_word := "1001010-----0010";   -- SWAP Rd
+   constant OpSWAP   :  opcode_word := "1001010-----0010";   -- SWAP Rd 
 
 --  Load and Store Opcodes
 
