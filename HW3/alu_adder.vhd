@@ -82,7 +82,7 @@ entity  alu_adder  is
         sub  :  in std_logic;      -- Add or subtract
         A, B :  in  std_logic_vector((bitsize - 1) downto 0);     -- Performing X - Y
         S    :  out  std_logic_vector((bitsize - 1) downto 0);    -- sum out
-        carry:  out  std_logic_vector(bitsize downto 0)           -- carry out
+        carry:  out  std_logic_vector((bitsize - 1) downto 0)           -- carry out
 
     );
 
@@ -100,7 +100,8 @@ architecture  dataflow  of  alu_adder  is
         );
     end  component;
     
-    signal  internal_Y : std_logic_vector( (bitsize - 1) downto 0);
+    signal  internal_B : std_logic_vector( (bitsize - 1) downto 0);
+	 signal carries : std_logic_vector((bitsize - 1) downto 0);
 
 begin
 
@@ -111,13 +112,13 @@ begin
     --  3. Add and do not use carry -> 0
     --  4. Add and use carry -> Ci
 
-    carry(0) <= sub xor Ci;  
+    carries(0) <= sub xor Ci;  
 
     -- Now figure out if we need to invert the Y signal to do 
     --  subtraction. 
                       
     internal_B <= not B when (sub = '1') else
-    internal_B <= B;
+                  B;
 
     -- Now that we have inverted the carry in and inverted the value being
     --  subtracted, we can just treat this as a string of full adders. 
@@ -125,11 +126,11 @@ begin
     Adders:  for i in  A'range  generate    -- generate bitsize full adders
     begin
 
-        FAx: FullAdder  port map  (A(i), internal_B(i), carry(i), S(i), carry(i + 1));
+        FAx: FullAdder  port map  (A(i), internal_B(i), carries(i), S(i), carries(i + 1));
 
     end generate;
 
-    -- Finally, invert the carry out if we are subtracting
-    Co <= carry(carry'high);        
+    -- Finally, map the internal carries to the external carry
+	carry <= carries(bitsize downto 1);
 
 end  dataflow;

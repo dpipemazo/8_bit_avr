@@ -51,18 +51,31 @@ architecture RegTestBehavior of REG_TEST is
 
     signal clk_cycle : std_logic;
 
-    signal write_reg : std_logic;
-
     signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
     signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
 
+    signal internalAOut : std_logic_vector(7 downto 0);
+    signal internalBOut : std_logic_vector(7 downto 0);
+
+
 begin
 
-    REG : entity REG  port map(IR, RegIn, clock, write_reg, clk_cycle, RegAOut, RegBOut);
-    ALU : entity ALU  port map(IR, RegAOut, RegBOut, clock, Result, StatReg, write_reg, clk_cycle);
+    REG : entity REG  port map(IR, RegIn, clock, clk_cycle, internalAOut, internalBOut);
+    ALU : entity ALU  port map(IR, internalAOut, internalBOut, clock, Result, StatReg, clk_cycle);
+
+    RegAOut <= internalAOut;
+    RegBOut <= internalBOut;
 
 end architecture ; -- RegTestBehavior
 
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.numeric_std.all;
+
+library opcodes;
+use opcodes.opcodes.all;
 
 entity  REG  is
 
@@ -86,7 +99,7 @@ architecture regBehavior of REG is
 
     signal  is2Cycles       :  boolean;
 
-    signal write_reg : std_logic;
+    signal  write_reg       : std_logic;
 
 begin
 
@@ -98,6 +111,12 @@ begin
             -- DFF the clk_cycle
             clk_cycle_dff <= clk_cycle;
 
+            -- Only write out to register A if write is high
+            if (write_reg = '1')  then
+                Registers(8 * conv_integer(internalASelect) + 7 downto
+                          8 * conv_integer(internalASelect)) <= RegIn(7 downto 0);
+            end if;
+
             --
             -- WHEN TO WRITE RESULT
             --
@@ -108,12 +127,6 @@ begin
                 write_reg <= '0';
             else
                 write_reg <= '1';
-            end if;
-
-            -- Only write out to register A if write is high
-            if (write_reg = '1')  then
-                Registers(8 * conv_integer(internalASelect) + 7 downto
-                          8 * conv_integer(internalASelect)) <= RegIn(7 downto 0);
             end if;
 
         end if;
