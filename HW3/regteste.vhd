@@ -37,18 +37,84 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.numeric_std.all;
 
-library opcodes;
-use opcodes.opcodes.all;
+library isim_temp;
+use isim_temp.opcodes.all;
+
+entity REG_tb is
+end REG_tb;
 
 
-entity  REG_TEST  is
+architecture TB_REG_ARCH of REG_tb is
 
-    port(
-        IR       :  in  opcode_word;                        -- Instruction Register
-        RegIn    :  in  std_logic_vector(7 downto 0);       -- input register bus
-        clock    :  in  std_logic;                          -- system clock
-        RegAOut  :  out std_logic_vector(7 downto 0);       -- register bus A out
-        RegBOut  :  out std_logic_vector(7 downto 0)        -- register bus B out
+  -- Component declaration of the tested unit
+  component  REG_TEST
+
+      port(
+          IR       :  in  opcode_word;                        -- Instruction Register
+          RegIn    :  in  std_logic_vector(7 downto 0);       -- input register bus
+          clock    :  in  std_logic;                          -- system clock
+          RegAOut  :  out std_logic_vector(7 downto 0);       -- register bus A out
+          RegBOut  :  out std_logic_vector(7 downto 0)        -- register bus B out
+      );
+
+  end component;
+
+  signal CLK          :  std_logic;
+
+  signal IR           :  opcode_word;
+
+  signal RegIn        :  std_logic_vector(7 downto 0);
+  signal RegAOut      :  std_logic_vector(7 downto 0);
+  signal RegBOut      :  std_logic_vector(7 downto 0);
+
+  --Signal used to stop clock signal generators
+  signal  END_SIM     :  BOOLEAN := FALSE;
+
+begin
+
+    -- Unit Under Test port map
+  UUT : REG_TEST
+    port map(
+      clk           =>  clock,
+      IR            =>  IR,
+      RegIn         =>  RegIn,
+      RegAOut       =>  RegAOut,
+      RegBOut       =>  RegBOut
     );
 
-end  REG_TEST;
+  process
+
+  begin
+
+  
+
+  end process;
+
+
+  CLOCK_CLK : process
+
+  begin
+
+    -- this process generates a 20 ns period, 50% duty cycle clock
+
+    -- only generate clock if still simulating
+
+    if END_SIM = FALSE then
+      CLK <= '0';
+      wait for 10 ns;
+    else
+      wait;
+    end if;
+
+    if END_SIM = FALSE then
+      CLK <= '1';
+      wait for 10 ns;
+    else
+      wait;
+    end if;
+
+  end process;
+
+end architecture ; -- TB_REG_ARCH
+
+

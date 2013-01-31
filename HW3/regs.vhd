@@ -31,8 +31,8 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.numeric_std.all;
 
-library opcodes;
-use opcodes.opcodes.all;
+library isim_temp;
+use isim_temp.opcodes.all;
 
 
 entity  REG_TEST  is
