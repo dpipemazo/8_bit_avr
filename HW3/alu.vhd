@@ -29,7 +29,6 @@ entity  ALU  is
         clock     :  in  std_logic;                         -- system clock
         Result    :  out std_logic_vector(7 downto 0);      -- ALU result
         StatReg   :  out std_logic_vector(7 downto 0)       -- status register
-        write_reg :  out std_logic;                         -- write enable for registers 
         clk_cycle :  out std_logic                          -- which clock cycle of a 
                                                             --  2 clock instruction we're on
                                                             --  Only matters for ADIW, MUL and SBIW
@@ -122,11 +121,11 @@ begin
                             --      std_match(IR, OpSUBC) or std_match(SBCI) or 
                             --      std_match(IR, OpSBIW))  else 
 
-    adder_Carry_input <= '1'        when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') or
-                                            std_match(IR, OpNEG) or std_match(IR, OpDEC) or
-                                            std_match(IR, OpINC) or std_match(IR, OpCPC)), 
-                         StatusReg(7) when ( std_match(IR, OpADC) or std_match(IR, OpSBC) or
-                                             std_match(IR, OpSBCI)), else
+    adder_Carry_input <= '1'        when (  std_match(IR, OpNEG) or std_match(IR, OpDEC) or
+                                            std_match(IR, OpINC)), 
+                         StatReg(7) when ( std_match(IR, OpADC) or std_match(IR, OpSBC) or
+                                             std_match(IR, OpSBCI) or std_match(IR, OpCPC) or
+                                             ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1')), else
                          '0';   --when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0') or
                                 --              std_match(IR, OpSUBI) or std_match(IR, OpADD) or 
                                 --             std_match(IR, OpSUB) or std_match(IR, OpCOM), ;
@@ -174,14 +173,14 @@ begin
     internal_status_reg(6) <= OperandA(conv_integer(IR(2 downto 0))) when(
                         std_match(IR, OpBST));
 
-    bitset_result   <= OperandA(7 downto 1) & StatusReg(6)                        when (std_match(IR(2 downto 0), "000")), 
-                       OperandA(7 downto 2) & StatusReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")),
-                       OperandA(7 downto 3) & StatusReg(6) & OperandA(1 downto 0) when (std_match(IR(2 downto 0), "010")),
-                       OperandA(7 downto 4) & StatusReg(6) & OperandA(2 downto 0) when (std_match(IR(2 downto 0), "011")),
-                       OperandA(7 downto 5) & StatusReg(6) & OperandA(3 downto 0) when (std_match(IR(2 downto 0), "100")),
-                       OperandA(7 downto 6) & StatusReg(6) & OperandA(4 downto 0) when (std_match(IR(2 downto 0), "101")),
-                                OperandA(7) & StatusReg(6) & OperandA(5 downto 0) when (std_match(IR(2 downto 0), "110")) else
-                                              StatusReg(6) & OperandA(6 downto 0); --when (std_match(IR(2 downto 0), "111"))
+    bitset_result   <= OperandA(7 downto 1) & StatReg(6)                        when (std_match(IR(2 downto 0), "000")), 
+                       OperandA(7 downto 2) & StatReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")),
+                       OperandA(7 downto 3) & StatReg(6) & OperandA(1 downto 0) when (std_match(IR(2 downto 0), "010")),
+                       OperandA(7 downto 4) & StatReg(6) & OperandA(2 downto 0) when (std_match(IR(2 downto 0), "011")),
+                       OperandA(7 downto 5) & StatReg(6) & OperandA(3 downto 0) when (std_match(IR(2 downto 0), "100")),
+                       OperandA(7 downto 6) & StatReg(6) & OperandA(4 downto 0) when (std_match(IR(2 downto 0), "101")),
+                                OperandA(7) & StatReg(6) & OperandA(5 downto 0) when (std_match(IR(2 downto 0), "110")) else
+                                              StatReg(6) & OperandA(6 downto 0); --when (std_match(IR(2 downto 0), "111"))
 
     --
     -- MAP INDIVIDUAL RESULTS TO INTERNAL RESULT IN MUX
@@ -310,19 +309,6 @@ begin
                                                 std_match(IR, OpSUB) or
                                                 std_match(IR, OpSUBI)) else
                               internal_status_reg(5);
-
-    --
-    -- WHEN TO WRITE RESULT
-    --
-    write_reg <=    '0' when(   std_match(IR, OpBCLR) or
-                                std_match(IR, OpBSET) or
-                                std_match(IR, OpBST) or
-                                std_match(IR, OpCP) or
-                                std_match(IR, OpCPC) or
-                                std_match(IR, OpCPI)) else
-                    '1';
-
-
 
 
     -- Clock the internal result to the external result on clock edges
