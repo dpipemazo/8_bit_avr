@@ -134,7 +134,7 @@ begin
     end process;
 
     -- Convenience signal that marks when we are processing a 2-clock command (SPIW/ADIW)
-    is2Cycles := std_match(IR, OpADIW) or std_match(IR, OpSPIW);
+    is2Cycles <= std_match(IR, OpADIW) or std_match(IR, OpSPIW);
 
     -- If we work with two clock instructions, or with ANDI, ORI, SUBI, SBCI
     -- We only work with the second half of registers, and set the input high

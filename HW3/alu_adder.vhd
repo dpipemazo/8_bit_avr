@@ -78,7 +78,7 @@ entity  alu_adder  is
     -- Note: We do not need a carry in on this entity, since it will be used
     --  strictly as a subtracter.
     port (
-        Ci   : in std_logic;       -- carry vector
+        Ci   :  in std_logic;       -- carry vector
         sub  :  in std_logic;      -- Add or subtract
         A, B :  in  std_logic_vector((bitsize - 1) downto 0);     -- Performing X - Y
         S    :  out  std_logic_vector((bitsize - 1) downto 0);    -- sum out

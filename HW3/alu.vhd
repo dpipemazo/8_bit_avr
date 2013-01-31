@@ -13,12 +13,13 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
+use ieee.std_logic_misc.all;
 use ieee.numeric_std.all;
 
 -- Import the custom libraries which Glen gave for this assignment
-library opcodes;
-use opcodes.opcodes.all;
-
+library isim_temp;
+use isim_temp.opcodes.all;
+use isim_temp.alu_adder;
 
 entity  ALU  is
 
@@ -28,8 +29,8 @@ entity  ALU  is
         OperandB  :  in  std_logic_vector(7 downto 0);      -- second operand
         clock     :  in  std_logic;                         -- system clock
         Result    :  out std_logic_vector(7 downto 0);      -- ALU result
-        StatReg   :  out std_logic_vector(7 downto 0)       -- status register
-        clk_cycle :  out std_logic                          -- which clock cycle of a 
+        StatReg   :  buffer std_logic_vector(7 downto 0);   -- status register
+        clk_cycle :  buffer std_logic                       -- which clock cycle of a 
                                                             --  2 clock instruction we're on
                                                             --  Only matters for ADIW, MUL and SBIW
     );
@@ -48,6 +49,7 @@ signal adder_result : std_logic_vector(7 downto 0);     -- output of the adder/s
                                                         -- unit
 signal shift_result : std_logic_vector(7 downto 0);
 signal add_result : std_logic_vector(7 downto 0);
+signal and_result : std_logic_vector(7 downto 0);
 signal or_result  : std_logic_vector(7 downto 0);
 signal xor_result : std_logic_vector(7 downto 0);
 signal swap_result: std_logic_vector(7 downto 0);
@@ -66,7 +68,7 @@ signal adder_b_input : std_logic_vector(7 downto 0);
 signal adder_sub_input : std_logic;
 signal adder_carry_input : std_logic;
 
-
+signal natural_index : natural;
 
 -- begin the process
 begin
@@ -75,7 +77,7 @@ begin
     -- Translate Operand B into the proper register or constant
     --
     internal_op_b <="00"&IR(7 downto 6)&IR(3 downto 0) when(std_match(IR, OpADIW) or
-                                                            std_match(IR, OpSBIW)),
+                                                            std_match(IR, OpSBIW)) else
                     IR(9 downto 6) & IR(3 downto 0)    when(std_match(IR, OpANDI) or 
                                                             std_match(IR, OpCPI) or
                                                             std_match(IR, OpORI) or
@@ -93,13 +95,12 @@ begin
     --  subtraction with and without carry, addition with and 
     --  without carry. 
     aluAdd : entity alu_adder port map(
-            Ci <= adder_carry_input;           -- Carry flag from status register
-            sub <= adder_sub_input;          -- Bit difference between add and subtract
-            useCarry <= adder_useCarry_input; -- Whether to use the carry or not
-            A <= adder_a_input;              -- map A to A
-            B <= adder_b_input;              -- map B to B
-            S <= adder_result;          -- map the result to adder_result
-            Cout <= adder_carries    -- map the carry out to a temporary signal
+            Ci => adder_carry_input,           -- Carry flag from status register
+            sub => adder_sub_input,            -- Bit difference between add and subtract
+            A => adder_a_input,                -- map A to A
+            B => adder_b_input,                -- map B to B
+            S => adder_result,               -- map the result to adder_result
+            Carry => adder_carries              -- map the carry out to a temporary signal
             );
 
     -- Map the correct input to the adder
@@ -122,10 +123,10 @@ begin
                             --      std_match(IR, OpSBIW))  else 
 
     adder_Carry_input <= '1'        when (  std_match(IR, OpNEG) or std_match(IR, OpDEC) or
-                                            std_match(IR, OpINC)), 
+                                            std_match(IR, OpINC)) else
                          StatReg(7) when ( std_match(IR, OpADC) or std_match(IR, OpSBC) or
                                              std_match(IR, OpSBCI) or std_match(IR, OpCPC) or
-                                             ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1')), else
+                                             ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1')) else
                          '0';   --when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0') or
                                 --              std_match(IR, OpSUBI) or std_match(IR, OpADD) or 
                                 --             std_match(IR, OpSUB) or std_match(IR, OpCOM), ;
@@ -136,7 +137,7 @@ begin
     --
 
     shift_result(6 downto 0) <= OperandA(7 downto 1);
-    shift_result(7) <=  OperandA(0) when (std_match(IR, OpROR)), 
+    shift_result(7) <=  OperandA(0) when (std_match(IR, OpROR)) else
                         OperandA(7) when (std_match(IR, OpASR)) else
                         '0';
     shift_carry <= OperandA(0);
@@ -164,21 +165,22 @@ begin
     --
     -- INSTRUCTIONS: BCLR, BSET
     --
-    internal_status_reg(conv_integer(IR(6 downto 4))) <= not IR(7) when (
+	 natural_index <= conv_unsigned((IR(6 downto 4)));
+    internal_status_reg(natural_index) <= not IR(7) when (
                         std_match(IR, OpBCLR) or std_match(IR, OpBSET));
 
     --
     -- INSTRUCTIONS: BLD, BST
     --
     internal_status_reg(6) <= OperandA(conv_integer(IR(2 downto 0))) when(
-                        std_match(IR, OpBST));
+                              std_match(IR, OpBST));
 
-    bitset_result   <= OperandA(7 downto 1) & StatReg(6)                        when (std_match(IR(2 downto 0), "000")), 
-                       OperandA(7 downto 2) & StatReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")),
-                       OperandA(7 downto 3) & StatReg(6) & OperandA(1 downto 0) when (std_match(IR(2 downto 0), "010")),
-                       OperandA(7 downto 4) & StatReg(6) & OperandA(2 downto 0) when (std_match(IR(2 downto 0), "011")),
-                       OperandA(7 downto 5) & StatReg(6) & OperandA(3 downto 0) when (std_match(IR(2 downto 0), "100")),
-                       OperandA(7 downto 6) & StatReg(6) & OperandA(4 downto 0) when (std_match(IR(2 downto 0), "101")),
+    bitset_result   <= OperandA(7 downto 1) & StatReg(6)                        when (std_match(IR(2 downto 0), "000")) else
+                       OperandA(7 downto 2) & StatReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")) else
+                       OperandA(7 downto 3) & StatReg(6) & OperandA(1 downto 0) when (std_match(IR(2 downto 0), "010")) else
+                       OperandA(7 downto 4) & StatReg(6) & OperandA(2 downto 0) when (std_match(IR(2 downto 0), "011")) else
+                       OperandA(7 downto 5) & StatReg(6) & OperandA(3 downto 0) when (std_match(IR(2 downto 0), "100")) else
+                       OperandA(7 downto 6) & StatReg(6) & OperandA(4 downto 0) when (std_match(IR(2 downto 0), "101")) else
                                 OperandA(7) & StatReg(6) & OperandA(5 downto 0) when (std_match(IR(2 downto 0), "110")) else
                                               StatReg(6) & OperandA(6 downto 0); --when (std_match(IR(2 downto 0), "111"))
 
@@ -201,17 +203,17 @@ begin
                                             std_match(IR, OpCPC)  or
                                             std_match(IR, OpCPI)  or
                                             std_match(IR, OpSBCI)  or
-                                            std_match(IR, OpCOM)),
-                    <= shift_result when(   std_match(IR, OpROR)  or
+                                            std_match(IR, OpCOM)) else
+                       shift_result when(   std_match(IR, OpROR)  or
                                             std_match(IR, OpASR)  or
-                                            std_match(IR, OpLSR)),
-                    <= and_result   when(   std_match(IR, OpAND)  or
-                                            std_match(IR, OpANDI)),
-                    <= or_result    when(   std_match(IR, OpOR)   or
-                                            std_match(IR, OpORI)),
-                    <= xor_result   when(   std_match(IR, OpEOR)),
-                    <= swap_result  when(   std_match(IR, OpSWP)),
-                    <= bitset_result when(  std_match(IR, OpBLD)),
+                                            std_match(IR, OpLSR)) else
+                       and_result   when(   std_match(IR, OpAND)  or
+                                            std_match(IR, OpANDI)) else
+                       or_result    when(   std_match(IR, OpOR)   or
+                                            std_match(IR, OpORI)) else
+                       xor_result   when(   std_match(IR, OpEOR)) else
+                       swap_result  when(   std_match(IR, OpSWAP))else
+                       bitset_result;-- when(  std_match(IR, OpBLD)) else
 
     --
     --
@@ -235,11 +237,11 @@ begin
                                                 std_match(IR, OpCPC) or
                                                 std_match(IR, OpCPI) or
                                                 std_match(IR, OpSBCI)or
-                                                std_match(IR, OpCOM)),
-                            <= shift_carry when(std_match(IR, OpROR) or
+                                                std_match(IR, OpCOM)) else
+                               shift_carry when(std_match(IR, OpROR) or
                                                 std_match(IR, OpASR) or
                                                 std_match(IR, OpLSR)) else
-                            <= internal_status_reg(0);
+                               internal_status_reg(0);
 
     --
     -- ZERO FLAG
@@ -271,11 +273,11 @@ begin
                                                 std_match(IR, OpBLD) or
                                                 std_match(IR, OpBST) or
                                                 std_match(IR, OpBSET) or
-                                                std_match(IR, OpSWAP)), 
+                                                std_match(IR, OpSWAP)) else
      internal_status_reg(2) xor internal_status_reg(0) when(
                                                 std_match(IR, OpROR) or
                                                 std_match(IR, OpASR) or
-                                                std_match(IR, OpLSR)), 
+                                                std_match(IR, OpLSR)) else
                                 '0' when(       std_match(IR, OpAND) or 
                                                 std_match(IR, OpANDI) or
                                                 std_match(IR, OpCOM) or
@@ -332,4 +334,5 @@ begin
 
 
 
+end behavioral;
 
