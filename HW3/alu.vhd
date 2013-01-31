@@ -48,6 +48,8 @@ signal adder_result : std_logic_vector(7 downto 0);     -- output of the adder/s
                                                         -- unit
 signal alu_adder_carry : std_logic;                     -- the carry out from the ALU adder
 signal adder_b_input : std_logic_vector(7 downto 0);    -- The input to "B" in the adder
+signal adder_sub_input : std_logic;
+signal adder_useCarry_input : std_logic;
 
 
 -- begin the process
@@ -58,8 +60,8 @@ begin
     --  without carry. 
     aluAdd : entity alu_adder port map(
             Ci <= StatReg(7);           -- Carry flag from status register
-            sub <= not IR(11);          -- Bit difference between add and subtract
-            useCarry <= IR(12);         -- Whether to use the carry or not
+            sub <= adder_sub_input;          -- Bit difference between add and subtract
+            useCarry <= adder_useCarry_input; -- Whether to use the carry or not
             A <= OperandA;              -- map A to A
             B <= adder_b_input;              -- map B to B
             S <= adder_result;          -- map the result to adder_result
@@ -67,14 +69,21 @@ begin
             );
 
     -- Map the correct input to the adder
-    adder_b_input <= "00"&IR(7 downto 6)&IR(3 downto 0) when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') else
+    adder_b_input <= "00"&IR(7 downto 6)&IR(3 downto 0) when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0'),
+                     "00000000" when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') else
                      OperandB;
 
+    adder_sub_input <= IR(8) when (std_match(IR, OpSBIW) or std_match(IR, OpADIW)) else
+                        not IR(10);
+
+    adder_useCarry_input <= '0' when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0'), 
+                            '1' when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') else 
+                            IR(12);
+
+
     -- When statement to map the correct results to the internal result line
-    internal_result <=  adder_result when (std_match(IR, OpADD) or std_match(IR, OpADC) or std_match(IR, OpSUB) or std_match(IR, OpSBC)), 
-
-
-
+    internal_result <=  adder_result when (std_match(IR, OpADD) or std_match(IR, OpADC) or std_match(IR, OpSUB) or std_match(IR, OpSBC) or std_match(IR, OpADIW) or std_match(IR, OpSBIW), 
+                        
 
     -- Clock the internal result to the external result on clock edges
     clockResult : process(clock)
@@ -85,7 +94,12 @@ begin
             Result <= internal_result;
             StatReg <= internal_status_reg;
 
-            
+            if ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and (clk_cycle /= '1') ) then
+                clk_cycle <= '1';
+            else
+                clk_cycle <= '0';
+            end if;
+
         end if;
 
     end process clockResult;
