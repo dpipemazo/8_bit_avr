@@ -63,7 +63,6 @@ entity  REG  is
         IR        :  in  opcode_word;                   -- Instruction Register
         RegIn     :  in  std_logic_vector(7 downto 0);  -- Input register bus
         clock     :  in  std_logic;                     -- System clock
-        write_reg :  in  std_logic;                     -- Whether we write Reg In
         clk_cycle :  in  std_logic;                     -- The first or second clk of instruction
         RegAOut   :  out std_logic_vector(7 downto 0);  -- Register bus A out
         RegBOut   :  out std_logic_vector(7 downto 0)   -- Register bus B out
@@ -80,6 +79,8 @@ architecture regBehavior of REG is
 
     signal  clk_cycle_dff   :  std_logic;
 
+    signal write_reg : std_logic;
+
 begin
 
     process (clk)
@@ -89,6 +90,18 @@ begin
 
             -- DFF the clk_cycle
             clk_cycle_dff <= clk_cycle;
+
+            --
+            -- WHEN TO WRITE RESULT
+            --
+            if(  std_match(IR, OpBCLR) or std_match(IR, OpBSET) or
+                 std_match(IR, OpBST)  or std_match(IR, OpCP) or
+                 std_match(IR, OpCPC)  or std_match(IR, OpCPI)) then
+
+                write_reg <= '0';
+            else
+                write_reg <= '1';
+            end if;
 
             -- Only write out to register A if write is high
             if (write_reg = '1')  then
