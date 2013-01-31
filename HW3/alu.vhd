@@ -43,47 +43,199 @@ architecture behavioral of ALU is
 signal internal_result : std_logic_vector(7 downto 0);  -- What gets mapped to
                                                         -- output result on clock edges
 signal internal_status_reg : std_logic_vector(7 downto 0); -- Internal value of the status
-                                                           -- Register.
+   
+-- Intermediate results                                                        -- Register.
 signal adder_result : std_logic_vector(7 downto 0);     -- output of the adder/subtracter
                                                         -- unit
-signal alu_adder_carry : std_logic;                     -- the carry out from the ALU adder
-signal adder_b_input : std_logic_vector(7 downto 0);    -- The input to "B" in the adder
+signal shift_result : std_logic_vector(7 downto 0);
+signal add_result : std_logic_vector(7 downto 0);
+signal or_result  : std_logic_vector(7 downto 0);
+signal xor_result : std_logic_vector(7 downto 0);
+signal swap_result: std_logic_vector(7 downto 0);
+signal bitset_result : std_logic_vector(7 downto 0);
+
+-- Carry Flags
+signal adder_carry : std_logic; 
+signal shift_carry : std_logic;
+
+-- Translated operand B
+signal internal_op_b : std_logic_vector(7 downto 0);
+
+-- Adder signals 
+signal adder_a_input : std_logic_vector(7 downto 0);
+signal adder_b_input : std_logic_vector(7 downto 0); 
 signal adder_sub_input : std_logic;
-signal adder_useCarry_input : std_logic;
+signal adder_Carry_input : std_logic;
+
 
 
 -- begin the process
 begin
 
+    --
+    -- Translate Operand B into the proper register or constant
+    --
+    internal_op_b <="00"&IR(7 downto 6)&IR(3 downto 0) when(std_match(IR, OpADIW) or
+                                                            std_match(IR, OpSBIW)),
+                    IR(9 downto 6) & IR(3 downto 0)    when(std_match(IR, OpANDI) or 
+                                                            std_match(IR, OpCPI) or
+                                                            std_match(IR, OpORI) or
+                                                            std_match(IR, OpSBCI) or
+                                                            std_match(IR, OpSUBI)) else 
+                    OperandB;
+
+
+    --
+    -- INSTRUCTIONS: ADD, ADC, SUB, SUBC, ADIW, SBIW, SUBI, NEG, DEC, INC, COM, 
+    --               CP, CPC, CPI, SBCI
+    --
+
     -- Wire up the alu adder unit. This unit is able to perform
     --  subtraction with and without carry, addition with and 
     --  without carry. 
     aluAdd : entity alu_adder port map(
-            Ci <= StatReg(7);           -- Carry flag from status register
+            Ci <= adder_carry_input;           -- Carry flag from status register
             sub <= adder_sub_input;          -- Bit difference between add and subtract
             useCarry <= adder_useCarry_input; -- Whether to use the carry or not
-            A <= OperandA;              -- map A to A
+            A <= adder_a_input;              -- map A to A
             B <= adder_b_input;              -- map B to B
             S <= adder_result;          -- map the result to adder_result
-            Cout <= alu_adder_carry    -- map the carry out to a temporary signal
+            Cout <= adder_carry    -- map the carry out to a temporary signal
             );
 
     -- Map the correct input to the adder
-    adder_b_input <= "00"&IR(7 downto 6)&IR(3 downto 0) when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0'),
-                     "00000000" when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') else
-                     OperandB;
+    adder_a_input <= not OperandA when ( std_match(IR, OpNEG) or std_match(IR, OpCOM)) else
+                     OperandA;
 
-    adder_sub_input <= IR(8) when (std_match(IR, OpSBIW) or std_match(IR, OpADIW)) else
-                        not IR(10);
 
-    adder_useCarry_input <= '0' when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0'), 
-                            '1' when ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') else 
-                            IR(12);
+    adder_b_input <= "00000000" when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') or
+                                        std_match(IR, OpINC) or std_match(IR, OpDEC) or 
+                                        std_match(IR, OpNEG) or std_match(IR, OpCOM)) else
+                     internal_op_b;
 
+    adder_sub_input <=  '0' when (std_match(IR, OpINC) or std_match(IR, OpNEG) or
+                                  std_match(IR, OpCOM) or std_match(IR, OpADD) or
+                                  std_match(IR, OpADC) or std_match(IR, OpADIW)) else
+                        '1';--when (std_match(IR, OpSUBI) or std_match(IR, OpDEC) or
+                            --     std_match(IR, OpCP) or std_match(IR, OpCPC) or
+                            --      std_match(IR, OpCPI) or std_match(IR, OpSUB) or
+                            --      std_match(IR, OpSUBC) or std_match(SBCI) or 
+                            --      std_match(IR, OpSBIW))  else 
+
+    adder_Carry_input <= '1'        when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') or
+                                            std_match(IR, OpNEG) or std_match(IR, OpDEC) or
+                                            std_match(IR, OpINC) or std_match(IR, OpCPC)), 
+                         StatusReg(7) when ( std_match(IR, OpADC) or std_match(IR, OpSBC) or
+                                             std_match(IR, OpSBCI)), else
+                         '0';   --when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0') or
+                                --              std_match(IR, OpSUBI) or std_match(IR, OpADD) or 
+                                --             std_match(IR, OpSUB) or std_match(IR, OpCOM), ;
+
+
+    -- 
+    -- INSTRUCTIONS: ASR, LSR, ROR
+    --
+
+    shift_result(6 downto 0) <= OperandA(7 downto 1);
+    shift_result(7) <=  OperandA(0) when (std_match(IR, OpROR)), 
+                        OperandA(7) when (std_match(IR, OpASR)) else
+                        '0';
+    shift_carry <= OperandA(0);
+
+    --
+    -- INSTRUCTIONS: AND, ANDI
+    --
+    and_result <= OperandA and internal_op_b;
+
+    --
+    -- INSTRUCTIONS: OR, ORI
+    --
+    or_result <= OperandA or internal_op_b;
+
+    --
+    -- INSTRUCTIONS: XOR
+    --
+    xor_result <= OperandA xor internal_op_b;
+
+    --
+    -- INSTRUCTION: SWAP
+    --
+    swap_result <= OperandA(3 downto 0) & OperandA(7 downto 4);
+
+    --
+    -- INSTRUCTIONS: BCLR, BSET
+    --
+    internal_status_reg(conv_integer(IR(6 downto 4))) <= not IR(7) when (
+                        std_match(IR, OpBCLR) or std_match(IR, OpBSET));
+
+    --
+    -- INSTRUCTIONS: BLD, BST
+    --
+    internal_status_reg(6) <= OperandA(conv_integer(IR(2 downto 0))) when(
+                        std_match(IR, OpBST));
+
+    bitset_result   <= OperandA(7 downto 1) & StatusReg(6)                        when (std_match(IR(2 downto 0), "000")), 
+                       OperandA(7 downto 2) & StatusReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")),
+                       OperandA(7 downto 3) & StatusReg(6) & OperandA(1 downto 0) when (std_match(IR(2 downto 0), "010")),
+                       OperandA(7 downto 4) & StatusReg(6) & OperandA(2 downto 0) when (std_match(IR(2 downto 0), "011")),
+                       OperandA(7 downto 5) & StatusReg(6) & OperandA(3 downto 0) when (std_match(IR(2 downto 0), "100")),
+                       OperandA(7 downto 6) & StatusReg(6) & OperandA(4 downto 0) when (std_match(IR(2 downto 0), "101")),
+                                OperandA(7) & StatusReg(6) & OperandA(5 downto 0) when (std_match(IR(2 downto 0), "110")) else
+                                              StatusReg(6) & OperandA(6 downto 0); --when (std_match(IR(2 downto 0), "111"))
+
+    --
+    -- MAP INDIVIDUAL RESULTS TO INTERNAL RESULT IN MUX
+    --
 
     -- When statement to map the correct results to the internal result line
-    internal_result <=  adder_result when (std_match(IR, OpADD) or std_match(IR, OpADC) or std_match(IR, OpSUB) or std_match(IR, OpSBC) or std_match(IR, OpADIW) or std_match(IR, OpSBIW), 
-                        
+    internal_result <= adder_result when(   std_match(IR, OpADD)  or 
+                                            std_match(IR, OpADC)  or 
+                                            std_match(IR, OpSUB)  or 
+                                            std_match(IR, OpSBC)  or 
+                                            std_match(IR, OpADIW) or 
+                                            std_match(IR, OpSBIW) or 
+                                            std_match(IR, OpSUBI) or
+                                            std_match(IR, OpINC)  or
+                                            std_match(IR, OpDEC)  or
+                                            std_match(IR, OpNEG)  or
+                                            std_match(IR, OpCP)   or
+                                            std_match(IR, OpCPC)  or
+                                            std_match(IR, OpCPI)  or
+                                            std_match(IR, OpSBCI)  or
+                                            std_match(IR, OpCOM)),
+                    <= shift_result when(   std_match(IR, OpROR)  or
+                                            std_match(IR, OpASR)  or
+                                            std_match(IR, OpLSR)),
+                    <= and_result   when(   std_match(IR, OpAND)  or
+                                            std_match(IR, OpANDI)),
+                    <= or_result    when(   std_match(IR, OpOR)   or
+                                            std_match(IR, OpORI)),
+                    <= xor_result   when(   std_match(IR, OpEOR)),
+                    <= swap_result  when(   std_match(IR, OpSWP)),
+                    <= bitset_result when(  std_match(IR, OpBLD)),
+
+
+    --
+    -- MAP INDIVIDUAL CARRY FLAGS TO INTERNAL STATUS REGISTER IN MUX
+    --
+    internal_status_reg(0)  <= adder_carry when(std_match(IR, OpADD) or 
+                                                std_match(IR, OpADC) or 
+                                                std_match(IR, OpSUB) or 
+                                                std_match(IR, OpSBC) or 
+                                                std_match(IR, OpADIW)or 
+                                                std_match(IR, OpSBIW)or 
+                                                std_match(IR, OpSUBI)or
+                                                std_match(IR, OpNEG) or -- INC and DEC do not touch the carry flag
+                                                std_match(IR, OpCP)  or
+                                                std_match(IR, OpCPC) or
+                                                std_match(IR, OpCPI) or
+                                                std_match(IR, OpSBCI)or
+                                                std_match(IR, OpCOM)),
+                            <= shift_carry when(std_match(IR, OpROR) or
+                                                std_match(IR, OpASR) or
+                                                std_match(IR, OpLSR)),
+
+
 
     -- Clock the internal result to the external result on clock edges
     clockResult : process(clock)

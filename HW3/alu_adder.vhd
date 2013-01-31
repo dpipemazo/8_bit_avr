@@ -80,7 +80,6 @@ entity  alu_adder  is
     port (
         Ci   : in std_logic;       -- carry vector
         sub  :  in std_logic;      -- Add or subtract
-        useCarry:  in std_logic;   -- Use the carry or not
         A, B :  in  std_logic_vector((bitsize - 1) downto 0);     -- Performing X - Y
         S    :  out  std_logic_vector((bitsize - 1) downto 0);    -- sum out
         Co   :  out  std_logic                                    -- carry out
@@ -113,7 +112,7 @@ begin
     --  3. Add and do not use carry -> 0
     --  4. Add and use carry -> Ci
 
-    carry(0) <= sub xor (Ci and useCarry);  
+    carry(0) <= sub xor Ci;  
 
     -- Now figure out if we need to invert the Y signal to do 
     --  subtraction. 
