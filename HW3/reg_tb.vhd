@@ -1,48 +1,43 @@
 ----------------------------------------------------------------------------
 --
---  Atmel AVR Register Array Test Entity Declaration
+--  Atmel AVR Register Array Test Entity 
 --
---  This is the entity declaration which must be used for building the
---  register array portion of the AVR design for testing.
+--  This is the test Entity for the Register Array. 
+--
+--  It first loads random values into all of the registers, using all of the 
+--  commands that load registers, and then checks to make sure the value was 
+--  correctly stored using all of the commands that don't alter registers, 
+--  and makes sure that these commands don't alter the registers. 
+--
+--  It then goes on to test the special cases, where some instructions only 
+--  operate on the upper half of registers, performing the same tests as
+--  above
+--
+--  It then goes on to check that ADIW and SBIW work as intended, over two 
+--  clocks. In this case it sets all of the registers to their index 
+--  (ie register 5 = 0x05). While doing this it ensures that OpBCLR/OpBSET
+--  do not overwrite other registers when they are run (but don't need
+--  to output any valid registers on RegAOut or RegBOut)
 --
 --  Revision History:
---     17 Apr 98  Glen George       Initial revision.
---     20 Apr 98  Glen George       Fixed minor syntax bugs.
---     22 Apr 02  Glen George       Updated comments.
---     18 Apr 04  Glen George       Updated comments and formatting.
---     21 Jan 06  Glen George       Updated comments.
+--     31 Jan 13  Sean Keenan  Initial Revision
 --
 ----------------------------------------------------------------------------
 
 
---
---  REG_TEST
---
---  This is the register array testing interface.  It just brings all the
---  important register array signals out for testing along with the
---  Instruction Register.
---
---  Inputs:
---    IR      - Instruction Register (16 bits)
---    RegIn   - input to the register array (8 bits)
---    clock   - the system clock
---
---  Outputs:
---    RegAOut - register bus A output (8 bits), eventually will connect to ALU
---    RegBOut - register bus B output (8 bits), eventually will connect to ALU
---
-
+-- Include std libraries
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.all;   
+use ieee.math_real.all;       -- Include this for random number generation 
 
+-- Include Glen's opcode definitions
 library work;
 use work.opcodes.all;
 
+-- Define Test Bench Entity
 entity REG_tb is
 end REG_tb;
-
 
 architecture TB_REG_ARCH of REG_tb is
 
@@ -59,10 +54,13 @@ architecture TB_REG_ARCH of REG_tb is
 
   end component;
 
+  -- Internal Clock Signal
   signal CLK          :  std_logic;
 
+  -- Instruction Register
   signal IR           :  opcode_word;
 
+  -- Register signal lines to the Register Array
   signal RegIn        :  std_logic_vector(7 downto 0);
   signal RegAOut      :  std_logic_vector(7 downto 0);
   signal RegBOut      :  std_logic_vector(7 downto 0);
@@ -75,38 +73,36 @@ architecture TB_REG_ARCH of REG_tb is
   -- Opcodes that don't write data based on RegIn Line
   --
 
-  constant dontWriteOpSize : integer := 1;
+  constant dontWriteOpSize : integer := 2;
 
   type DONT_WRITE_OP is array (0 to dontWriteOpSize) of std_logic_vector(15 downto 0);
 
   constant dontWriteOp : DONT_WRITE_OP := (
+      OpBST,    -- Don't write Operand 2
       OpCP,
       OpCPC
-      -- OpBCLR, --
-      -- OpBLD,  --
-      -- OpBSET, --
-      -- OpBST  --
     );
-
-  -- type dont_write_op is(
-  --     OpBCLR,
-  --     OpBLD,
-  --     OpBSET,
-  --     OpBST,
-  --     OpCP,
-  --     OpCPC
-  -- );
 
   --
   -- Opcodes that Write based on the RegIn Line
+  -- All of them output Operand 1, but only after index 8 do they output Operand 2
   -- And don't alter Operand 1 in any abnormal way
   --
 
-  constant writeOpSize : integer := 6;
+  constant writeOpSize : integer := 15; --6;
 
   type WRITE_OP is array (0 to writeOpSize) of std_logic_vector(15 downto 0);
 
   constant writeOp : WRITE_OP := (
+        OpASR,  -- Don't write Operand 2
+        OpBLD,  -- Don't write Operand 2
+        OpCOM,  -- Don't write Operand 2
+        OpDEC,  -- Don't write Operand 2
+        OpINC,  -- Don't write Operand 2
+        OpLSR,  -- Don't write Operand 2
+        OpNEG,  -- Don't write Operand 2
+        OpROR,  -- Don't write Operand 2
+        OpSWAP, -- Don't write Operand 2
         OpADC,
         OpADD,
         OpAND,
@@ -114,16 +110,8 @@ architecture TB_REG_ARCH of REG_tb is
         OpOR,  
         OpSBC, 
         OpSUB
-        -- OpASR, --
-        -- OpCOM, --
-        -- OpDEC, --
-        -- OpINC, --
-        -- OpLSR, --
-        -- OpNEG, --
-        -- OpROR, --
-        -- OpSWAP --
     );
-
+  
   --
   -- Opcodes that only operate on registers 16 to 31
   --
@@ -154,7 +142,7 @@ architecture TB_REG_ARCH of REG_tb is
 
 begin
 
-    -- Unit Under Test port map
+  -- Unit Under Test port map
   UUT : REG_TEST
     port map(
       clock         =>  clk,
@@ -166,14 +154,16 @@ begin
 
   process
 
-  variable j : integer range 0 to 128;
+  -- Index used to determine what register we are looking at in our loops
+  variable j : integer range 0 to 31;
 
+  -- Variable that temporarily stores an op-code that is then transfered to the IR
   variable temp_op : std_logic_vector(15 downto 0);
 
   variable temp_b_reg : std_logic_vector(4 downto 0);
 
   variable seed1, seed2: positive;               -- Seed values for random generator
-  variable randInt, oldRandInt : integer;
+  variable randInt, oldRandInt, randInt2 : integer;
   variable rand: real;                           -- Random real-number value in range 0 to 1.0
 
   variable a, b : integer;
@@ -198,7 +188,7 @@ begin
 
         -- If we are past register 0 (and thus have loaded a value into reg j - 1)
         -- Then load register j-1 into RegBOut
-        if (j > 0) then
+        if (j > 0 and a > 8 and b > 0) then
           temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
           temp_op(9) := temp_b_reg(4);
           temp_op(3 downto 0) := temp_b_reg(3 downto 0);
@@ -214,14 +204,16 @@ begin
         randInt := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..65536, find integer part
         RegIn <= std_logic_vector(to_unsigned(randInt, RegIn'LENGTH));  -- convert to std_logic_vector
 
-        wait for 20 ns;
+        wait for 18 ns;
 
         -- If we have 
-        if (j > 0) then
+        if (j > 0 and a > 8 and b > 0) then
           assert (to_integer(unsigned(RegBOut)) = oldRandInt) 
           report "Non-Writing cmd altered register OR Reg B not valid"
           severity ERROR;
         end if;
+
+        wait for 2 ns;
 
         -- Check to see if we have written properly (and that we aren't writing)
 
@@ -238,11 +230,20 @@ begin
 
         IR <= temp_op;
 
-        wait for 20 ns;
+        -- Generate a random number to store in reg (j)
+        UNIFORM(seed1, seed2, rand);             -- generate random number
+        randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..65536, find integer part
+        RegIn <= std_logic_vector(to_unsigned(randInt2, RegIn'LENGTH));  -- convert to std_logic_vector
+
+
+        wait for 18 ns;
 
         assert(to_integer(unsigned(RegAOut)) = randInt) 
         report "Did not store Register Properly"
         severity ERROR;
+
+        wait for 2 ns;
+
       end loop;
     end loop;
   end loop;
@@ -276,7 +277,7 @@ begin
       randInt := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..65536, find integer part
       RegIn <= std_logic_vector(to_unsigned(randInt, RegIn'LENGTH));  -- convert to std_logic_vector
 
-      wait for 20 ns;
+      wait for 18 ns;
 
       -- If we have 
       if (j > 0) then
@@ -285,43 +286,80 @@ begin
         severity ERROR;
       end if;
 
-      -- Check to see if we have written properly (and that we aren't writing)
+      wait for 2 ns;
 
+      -- Check to see if we have written properly (and that we aren't writing)
+      -- OpCPI is the only Register that operates on only the second half of all registers
+      -- and doesn't write, so lets use that.
       temp_op  := OpCPI;
       temp_op(7 downto 4) := std_logic_vector(to_unsigned(j, 4));
 
       IR <= temp_op;
 
-      wait for 20 ns;
+      -- Generate a random number to store in reg (j)
+      UNIFORM(seed1, seed2, rand);             -- generate random number
+      randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..65536, find integer part
+      RegIn <= std_logic_vector(to_unsigned(randInt2, RegIn'LENGTH));  -- convert to std_logic_vector
+
+
+      wait for 18 ns;
 
       assert(to_integer(unsigned(RegAOut)) = randInt) 
       report "Did not store Register Properly with second half reg commands"
       severity ERROR;
+
+      wait for 2 ns;
+
     end loop;
   end loop;
 
   -- Test ADIW and SBIW commands
 
-  -- First we will load registers 24-31 with their own register number
-  -- So that we can test these instructions more easily
-
-  for j in 24 to 31 loop
-
-    -- Load a command that performs a write
-    temp_op  := OpADD;
-
-    -- Use Register j
-    temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
-
-    IR  <= temp_op;
-
-    RegIn <= std_logic_vector(to_unsigned(j, RegIn'LENGTH));  -- convert to std_logic_vector
-
-    wait for 20 ns;
-
-  end loop;
-
   for a in 0 to twoClocksSize loop
+
+    -- First we will load registers 24-31 with their own register number
+    -- So that we can test these instructions more easily
+
+    for j in 24 to 31 loop
+
+      -- Load a command that performs a write
+      temp_op  := OpADD;
+
+      -- Use Register j
+      temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
+
+      IR    <= temp_op;
+
+      RegIn <= std_logic_vector(to_unsigned(j, RegIn'LENGTH));  -- convert to std_logic_vector
+
+      wait for 20 ns;
+
+      RegIn <= "00000000";
+      IR    <= OpBCLR;
+
+      wait for 20 ns;
+
+      RegIn <= "00000000";
+      IR    <= OpBSET;
+
+      wait for 20 ns;
+
+      temp_op  := OpCP;
+      -- Use Register j
+      temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
+
+      IR    <= temp_op;
+
+      wait for 18 ns;
+
+      assert(to_integer(unsigned(RegAOut)) = j) 
+      report "OpBCLR/OpBSET overwrote value (or ADD/CP are broken)"
+      severity ERROR;
+
+      wait for 2 ns;
+
+    end loop;
+
     for j in 0 to 3 loop
 
       temp_op := twoClocks(a);
@@ -335,19 +373,17 @@ begin
       wait for 18 ns;
 
       assert(to_integer(unsigned(RegAOut)) = 24 + j*2)
-      report "First Half of two clock out wrong"
+      report "First clock on ADIW/SBIW out wrong"
       severity ERROR;
 
-      wait for 2 ns;
-
-      wait for 18 ns;
+      wait for 20 ns;
 
       assert(to_integer(unsigned(RegAOut)) = 24 + j*2 + 1)
-      report "Second Half of two clock out wrong"
+      report "Second clock on ADIW/SBIW out wrong"
       severity ERROR;
 
       wait for 2 ns;
-      
+
     end loop;
   end loop;
 
