@@ -11,10 +11,13 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.std_logic_misc.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 
-library opcodes;
-use opcodes.opcodes.all;
+library work;
+use work.opcodes.all;
+use work.alu;
 
 -- Test bench entity declaration
 entity alu_tb is
@@ -109,14 +112,14 @@ begin
         -- only generate clock while still have stimulus vectors
 
         if END_SIM = FALSE then
-            sysclk <= '0';
+            clock <= '1';
             wait for 10 ns;
         else
             wait;
         end if;
 
         if END_SIM = FALSE then
-            sysclk <= '1';
+            clock <= '0';
             wait for 10 ns;
         else
             wait;
@@ -179,18 +182,18 @@ begin
                     IR <= OpADC;
 
                     -- Do the add
-                    expected_result := rand_inptA + rand_inptB;
+                    expected := std_logic_vector(unsigned(rand_inptA) + unsigned(rand_inptB));
 
                     -- Compensate for the carry if there is one
                     if (StatReg(0) = '1') then
-                        expected_result := expected_result + 1;
+                        expected := std_logic_vector(unsigned(expected) + 1);
                     end if;
 
                     -- Now wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- Now check the answer
-                    assert(result = expected_result) report "Wrong Answer random input OpADC test";
+                    assert(result = expected) report "Wrong Answer random input OpADC test";
 
                 --
                 -- INSTRUCTION: ADD
@@ -201,13 +204,13 @@ begin
                     IR <= OpADD;
 
                     -- Do the add
-                    expected_result := rand_inptA + rand_inptB;
+                    expected := std_logic_vector(unsigned(rand_inptA) + unsigned(rand_inptB));
 
                     -- Now wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- And check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpADD test";
+                    assert(result = expected) report "Wrong answer random input OpADD test";
 
                 --
                 -- INSTRUCTION: ADIW
@@ -230,28 +233,28 @@ begin
                     IR <= temp_op;
 
                     -- Now calculate the expected result
-                    expected_result := rand_inptA + "00"&rand_inptB(5 downto 0);
+                    expected := std_logic_vector(unsigned(rand_inptA) + unsigned("00"&rand_inptB(5 downto 0)));
 
                     -- now wait for the first answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
-                    assert(result = expected_result) report "Wrong answer random input OpADIW test clock 1";
+                    assert(result = expected) report "Wrong answer random input OpADIW test clock 1";
 
                     --
                     -- SECOND CLOCK, add carry (leaving operandA on the bus)
                     --
 
-                    if (StatusReg(0) = '1') then
-                        expected_result := rand_inptA + 1;
+                    if (StatReg(0) = '1') then
+                        expected := std_logic_vector(unsigned(rand_inptA) + 1);
                     else
-                        expected_result := rand_inptA;
+                        expected := rand_inptA;
                     end if;
 
                     -- Now wait for the second answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpADIW test clock 2";
+                    assert(result = expected) report "Wrong answer random input OpADIW test clock 2";
 
                 --
                 -- INSTRUCTION: AND
@@ -262,12 +265,12 @@ begin
                     IR <= OpAND;
 
                     -- Do the AND
-                    expected_result = rand_inptA and rand_inptB;
+                    expected := rand_inptA and rand_inptB;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
-                    assert(result = expected_result) report "Wrong answer random input OpAND test";
+                    assert(result = expected) report "Wrong answer random input OpAND test";
 
                 --
                 -- INSTRUCTION: ANDI
@@ -284,13 +287,13 @@ begin
                     IR <= temp_op;
 
                     -- Do the AND
-                    expected_result = rand_inptA and rand_inptB;
+                    expected := rand_inptA and rand_inptB;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpANDI test";
+                    assert(result = expected) report "Wrong answer random input OpANDI test";
 
                 --
                 -- INSTRUCTION: ASR
@@ -301,14 +304,14 @@ begin
                     IR <= OpASR;
 
                     -- Do the shift
-                    expected_result(6 downto 0) := rand_inptA(7 downto 1);
-                    expected_result(7) := rand_inptA(7);
+                    expected(6 downto 0) := rand_inptA(7 downto 1);
+                    expected(7) := rand_inptA(7);
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpASR test";
+                    assert(result = expected) report "Wrong answer random input OpASR test";
 
                 --
                 -- INSTRUCTION: BCLR
@@ -326,7 +329,7 @@ begin
                     IR <= temp_op;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
                     assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '0') report "Wrong answer random input OpBCLR test";
@@ -348,10 +351,10 @@ begin
                     IR <= temp_op;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result(to_integer(unsigned(rand_inptB(2 downto 0)))) = check_bit) report "Wrond answer random input OpBLD test"
+                    assert(result(to_integer(unsigned(rand_inptB(2 downto 0)))) = check_bit) report "Wrond answer random input OpBLD test";
 
                 --
                 -- INSTRUCTION: BSET
@@ -369,7 +372,7 @@ begin
                     IR <= temp_op;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
                     assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '1') report "Wrong answer random input OpBCLR test";
@@ -387,7 +390,7 @@ begin
                     IR <= temp_op;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
                     assert(StatReg(to_integer(unsigned(rand_inptB(2 downto 0)))) = rand_inptA(to_integer(unsigned(rand_inptB(2 downto 0)))) ) report "Wrong answer random input OpBST test";
@@ -401,23 +404,23 @@ begin
                     IR <= OpCom;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- calculate the expected result
-                    expected_result = not rand_inptA
+                    expected := not rand_inptA;
 
                     -- Check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpCOM test";
+                    assert(result = expected) report "Wrong answer random input OpCOM test";
 
                 --
                 -- INSTRUCTION: CP
                 --
                 elsif( op = OP_CP ) then
                     -- Put the instruction word on the bus
-                    IR <= OpCP
+                    IR <= OpCP;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                 --
                 -- INSTRUCTION: CPC
@@ -428,7 +431,7 @@ begin
                     IR <= OpCPC;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                 --
                 -- INSTRUCTION: CPI
@@ -444,7 +447,7 @@ begin
                     IR <= temp_op;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                 --
                 -- INSTRUCTION: DEC
@@ -455,13 +458,13 @@ begin
                     IR <= OpDEC;
 
                     -- Calculate the expected result
-                    expected_result = rand_inptA - 1;
+                    expected := std_logic_vector(unsigned(rand_inptA) - 1);
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpDEC test";
+                    assert(result = expected) report "Wrong answer random input OpDEC test";
 
                 --
                 -- INSTRUCTION: EOR
@@ -472,13 +475,13 @@ begin
                     IR <= OpEOR;
 
                     -- calculate the expected result
-                    expected_result := rand_inptA xor rand_inptB;
+                    expected := rand_inptA xor rand_inptB;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpEOR test";
+                    assert(result = expected) report "Wrong answer random input OpEOR test";
 
                 --
                 -- INSTRUCTION: INC
@@ -489,13 +492,13 @@ begin
                     IR <= OpINC;
 
                     -- Calculate the expected result
-                    expected_result = rand_inptA + 1;
+                    expected := std_logic_vector(unsigned(rand_inptA) + 1);
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpINC test";
+                    assert(result = expected) report "Wrong answer random input OpINC test";
 
                 --
                 -- INSTRUCTION: LSR
@@ -506,14 +509,14 @@ begin
                     IR <= OpLSR;
 
                     -- Calculate the expected result
-                    expected_result(6 downto 0) := rand_inptA(7 downto 1);
-                    expected_result(7) := '0';
+                    expected(6 downto 0) := rand_inptA(7 downto 1);
+                    expected(7) := '0';
 
                     --wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     --check the answer
-                    assert(result = expected_result) report "Wrong Answer random input OpLSR test";
+                    assert(result = expected) report "Wrong Answer random input OpLSR test";
 
                 --
                 -- INSTRUCTION: NEG
@@ -524,30 +527,30 @@ begin
                     IR <= OpNEG;
 
                     -- Calculate the expected result
-                    expected_result := not rand_inptA + 1;
+                    expected := std_logic_vector(unsigned(not rand_inptA) + 1);
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert( result = expected_result ) report "Wrong answer random input OpNEG test";
+                    assert( result = expected ) report "Wrong answer random input OpNEG test";
 
                 --
                 -- INSTRUCTION: OR
                 --
-                elsif ( op = OR ) then
+                elsif ( op = OP_OR ) then
 
                     -- Put the instruction on the bus
                     IR <= OpOR;
 
                     -- calculate the expected result
-                    expected_result = rand_inptA or rand_inptB;
+                    expected := rand_inptA or rand_inptB;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpOR test";
+                    assert(result = expected) report "Wrong answer random input OpOR test";
 
                 --
                 -- INSTRUCTION: ORI
@@ -563,13 +566,13 @@ begin
                     IR <= temp_op;
 
                     -- calculate the expected answer
-                    expected_result = rand_inptA or rand_inptB;
+                    expected := rand_inptA or rand_inptB;
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert( result = expected_result) report "Wrong answer random input OpORI test";
+                    assert( result = expected) report "Wrong answer random input OpORI test";
 
                 --
                 -- INSTRUCTION: ROR
@@ -580,14 +583,14 @@ begin
                     IR <= OpROR;
 
                     -- calculate the expected result
-                    expected_result(6 downto 0) := rand_inptA(7 downto 1);
-                    expected_result(7) := rand_inptA(0);
+                    expected(6 downto 0) := rand_inptA(7 downto 1);
+                    expected(7) := rand_inptA(0);
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert( result = expected_result ) report "Wrong answer random input OpROR test";
+                    assert( result = expected ) report "Wrong answer random input OpROR test";
 
                 --
                 -- INSTRUCTION: SBC
@@ -598,18 +601,18 @@ begin
                     IR <= OpSBC;
 
                     -- calculate the expected result
-                    expected_result := rand_inptA - rand_inptB;
+                    expected := std_logic_vector(unsigned(rand_inptA) - unsigned(rand_inptB));
 
                     -- compensate for the carry flag
                     if (StatReg(0) = '1') then
-                        expected_result := expected_result - 1;
+                        expected := std_logic_vector(unsigned(expected) - 1);
                     end if;
 
                     -- wait for answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert( result = expected_result ) report "Wrong answer random input OpSBC test"
+                    assert( result = expected ) report "Wrong answer random input OpSBC test";
 
                 --
                 -- INSTRUCTION: SBCI
@@ -625,18 +628,18 @@ begin
                     IR <= temp_op;
 
                     -- calculate the expected result
-                    expected_result := rand_inptA - rand_inptB;
+                    expected := std_logic_vector(unsigned(rand_inptA) - unsigned(rand_inptB));
 
                     -- compensate for the carry flag
                     if (StatReg(0) = '1') then
-                        expected_result := expected_result - 1;
+                        expected := std_logic_vector(unsigned(expected) - 1);
                     end if;
 
                     -- wait for answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert(result = expected_result) report "Wrong answer random input OpSBCI test";
+                    assert(result = expected) report "Wrong answer random input OpSBCI test";
 
                 --
                 -- INSTRUCTION: SBIW
@@ -652,26 +655,26 @@ begin
                     IR <= temp_op;
 
                     -- calculate the expected result
-                    expected_result := rand_inptA - "00"&rand_inptB(5 downto 0);
+                    expected := std_logic_vector(unsigned(rand_inptA) - unsigned("00"&rand_inptB(5 downto 0)));
 
                     -- wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert( result = expected_result ) report "Wrong answer random input OpSBIW test clock 1";
+                    assert( result = expected ) report "Wrong answer random input OpSBIW test clock 1";
 
                     -- Now need to do the second clock, which is just a subtract
                     --  with carry
                     if (StatReg(0) = '1') then
-                        expected_result := rand_inptA - 1;
+                        expected := std_logic_vector(unsigned(rand_inptA) - 1);
                     else
-                        expected_result := rand_inptA;
+                        expected := rand_inptA;
                     end if;
 
                     -- now wait for the answer
-                    wait 15 ns;
+                    wait for 15 ns;
 
-                    assert( result = expected_result ) report "Wrong answer random input OpSBIW test clock 2";
+                    assert( result = expected ) report "Wrong answer random input OpSBIW test clock 2";
 
                 --
                 -- INSTRUCTION: SUB
@@ -682,18 +685,18 @@ begin
                     IR <= OpSUB;
 
                     -- calculate the expected result
-                    expected_result := rand_inptA - rand_inptB;
+                    expected := std_logic_vector(unsigned(rand_inptA) - unsigned(rand_inptB));
 
                     -- wait for the answer to show up
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert( result = expected_result ) report "Wrong answer random input OpSUB test";
+                    assert( result = expected ) report "Wrong answer random input OpSUB test";
 
                 --
                 -- INSTRUCTION: SUBI
                 --
-                elsif ( op = SUBI ) then
+                elsif ( op = OP_SUBI ) then
 
                     -- Need to create the opcode for the bus
                     temp_op := OpSUBI;
@@ -704,13 +707,13 @@ begin
                     IR <= temp_op;
 
                     -- calculate the expected result
-                    expected_result = rand_inptA - rand_inptB;
+                    expected := std_logic_vector(unsigned(rand_inptA) - unsigned(rand_inptB));
 
                     -- wait for the answer to show up
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert ( result = expected_result ) report "Wrong answer input OpSUBI test";
+                    assert ( result = expected ) report "Wrong answer input OpSUBI test";
 
                 --
                 -- INSTRUCTION: SWAP
@@ -721,23 +724,23 @@ begin
                     IR <= OpSwap;
 
                     -- calculate the expected result
-                    expected_result(3 downto 0) := rand_inptA(7 downto 4);
-                    expected_result(7 downto 4) := rand_inptA(3 downto 0);
+                    expected(3 downto 0) := rand_inptA(7 downto 4);
+                    expected(7 downto 4) := rand_inptA(3 downto 0);
 
                     -- wait for the result to show up
-                    wait 15 ns;
+                    wait for 15 ns;
 
                     -- check the answer
-                    assert ( result = expected_result ) report "Wrong answer input OpSWAP test";
+                    assert ( result = expected ) report "Wrong answer input OpSWAP test";
 
                 --
                 -- DONE LOOPING THROUGH INSTRUCTIONS! YAY
                 --
                 end if;
 
-                -- we only waited 15 ns to check the answer, now
+                -- we only waited for 15 ns to check the answer, now
                 --  wait the remaining 5 ns for the next clock
-                wait 5 ns;
+                wait for 5 ns;
 
                 -----
                 --
@@ -755,14 +758,14 @@ begin
                     
                     -- compute the carry flag
                     check_bit := ((not rand_inptA(7)) and rand_inptB(7)) or (rand_inptB(7) and result(7)) or (result(7) and (not rand_inptA(7)));
-                    assert(StatRegs(0) = check_bit ) report "Adder Unit carry Flag incorrect";
+                    assert(StatReg(0) = check_bit ) report "Adder Unit carry Flag incorrect";
 
 
-                elsif ( op = COM ) then
-                    assert(StatRegs(0) = '1') report "COM instruction carry flag incorrect";
+                elsif ( op = OP_COM ) then
+                    assert(StatReg(0) = '1') report "COM instruction carry flag incorrect";
 
-                elsif ( op = OP_ASR or op = OP_ROR or op = OP_LSR ) ) then
-                    assert(StatRegs(0) = rand_inptA(0)) report "Shifter Unit carry flag incorrect";
+                elsif ( op = OP_ASR or op = OP_ROR or op = OP_LSR ) then
+                    assert(StatReg(0) = rand_inptA(0)) report "Shifter Unit carry flag incorrect";
 
                 end if;
 
@@ -773,13 +776,13 @@ begin
                            op = OP_BSET or op = OP_BST or 
                            op = OP_SWAP ) ) then
 
-                    if ( conv_integer(result) = 0 ) then
+                    if ( OR_REDUCE(result) = '0' ) then
                         check_bit := '1';
                     else
                         check_bit := '0';
                     end if;
 
-                    assert(StatRegs(1) = check_bit) report "Zero flag incorrect";
+                    assert(StatReg(1) = check_bit) report "Zero flag incorrect";
 
                 end if;
 
@@ -790,7 +793,7 @@ begin
                            op = OP_BSET or op = OP_BST or 
                            op = OP_SWAP ) ) then
 
-                    assert(StatRegs(2) = result(7)) report "Negative Flag Incorrect";
+                    assert(StatReg(2) = result(7)) report "Negative Flag Incorrect";
 
                 end if;
 
@@ -798,22 +801,22 @@ begin
                 -- SIGNED OVERFLOW FLAG
                 --
 
-                if ( op = ( op = OP_ADC  or op = OP_ADD  or op = OP_ADIW or
-                            op = OP_CPC  or op = OP_CPC  or op = OP_CPI  or 
-                            op = OP_DEC  or op = OP_INC  or op = OP_NEG  or
-                            op = OP_SBC  or op = OP_SBCI or op = OP_SBIW or
-                            op = OP_SUB  or op = OP_SUBI ) ) then
+                if ( op = OP_ADC  or op = OP_ADD  or op = OP_ADIW or
+                     op = OP_CPC  or op = OP_CPC  or op = OP_CPI  or 
+                     op = OP_DEC  or op = OP_INC  or op = OP_NEG  or
+                     op = OP_SBC  or op = OP_SBCI or op = OP_SBIW or
+                     op = OP_SUB  or op = OP_SUBI )  then
 
                     check_bit := (rand_inptA(7) and not rand_inptB(7) and not result(7)) or (not rand_inptA(7) and rand_inptB(7) and result(7));
-                    assert(StatRegs(3) = check_bit) report "Arithmetic operation Signed Overflow Incorrect";
+                    assert(StatReg(3) = check_bit) report "Arithmetic operation Signed Overflow Incorrect";
 
                 elsif( op = OP_AND  or op = OP_ANDI or op = OP_COM  or
-                       op = OP_EOR  or op = OP_OR   or op = OP_ORI ) ) then
-                    assert(StatRegs(3) = '0') report "Logical operation Signed Overflow Incorrect";
+                       op = OP_EOR  or op = OP_OR   or op = OP_ORI ) then
+                    assert(StatReg(3) = '0') report "Logical operation Signed Overflow Incorrect";
 
-                elsif( op =(OP_ASR  or OP_LSR  or OP_ROR ) ) then
+                elsif( op = OP_ASR  or op = OP_LSR  or op = OP_ROR ) then
                     check_bit := result(7) xor rand_inptA(0);
-                    assert(StatRegs(3) = check_bit) report "Shift operation signed overflow incorrect"
+                    assert(StatReg(3) = check_bit) report "Shift operation signed overflow incorrect";
 
                 end if;
 
@@ -825,7 +828,7 @@ begin
                            op = OP_BSET or op = OP_BST or 
                            op = OP_SWAP ) ) then
 
-                    assert( StatRegs(4) = (StatRegs(3) xor StatRegs(2))) report "Sign flag incorrect";
+                    assert( StatReg(4) = (StatReg(3) xor StatReg(2))) report "Sign flag incorrect";
 
                 end if;
 
@@ -836,10 +839,10 @@ begin
                 if ( op = OP_ADD  or op = OP_ADC  or op = OP_CP   or
                      op = OP_CPC  or op = OP_CPI  or op = OP_NEG  or 
                      op = OP_SBC  or op = OP_SBCI or op = OP_SUB  or 
-                     op = OP_SUBI )) then
+                     op = OP_SUBI ) then
 
                     check_bit := (not rand_inptA(3) and rand_inptB(3)) or (rand_inptB(3) and result(3)) or (not rand_inptA(3) and result(3));
-                    assert(StatRegs(5) = check_bit) report "half-carry flag incorrect"; 
+                    assert(StatReg(5) = check_bit) report "half-carry flag incorrect"; 
                 
                 end if;
 

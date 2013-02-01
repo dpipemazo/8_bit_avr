@@ -340,6 +340,11 @@ end behavioral;
 library ieee;
 use ieee.std_logic_1164.all;
 
+-- Import the custom libraries which Glen gave for this assignment
+library work;
+use work.opcodes.all;
+use work.alu;
+
 entity  ALU_TEST  is
 
     port(
@@ -356,10 +361,15 @@ end  ALU_TEST;
 architecture arch of ALU_TEST is 
 
     signal clock_cycle : std_logic;
+    signal result_buffer : std_logic_vector(7 downto 0);
+    signal stat_reg_buffer : std_logic_vector( 7 downto 0);
 
 begin
     
-    ALUTst: entity ALU port map( IR, OperandA, OperandB, clock, Result, StatReg, clock_cycle);
+    ALUTst: entity ALU port map( IR, OperandA, OperandB, clock, result_buffer, stat_reg_buffer, clock_cycle);
+
+    Result <= result_buffer;
+    StatReg <= stat_reg_buffer;
 
 end arch;
 
