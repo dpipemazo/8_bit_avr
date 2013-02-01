@@ -52,7 +52,7 @@ architecture regBehavior of REG is
 
     signal regArr : regArrType;
 
-    signal  vector          :  std_logic_vector(255 downto 0);
+    signal  registers       :  std_logic_vector(255 downto 0);
     
     signal  internalASelect :  std_logic_vector(4 downto 0);
     signal  internalBSelect :  std_logic_vector(4 downto 0);
@@ -109,7 +109,12 @@ begin
 
             -- Only write out to register A if write is high
             if (write_reg = '1')  then
-                regArr(to_integer(unsigned(internalASelect))) <= RegIn(7 downto 0);
+                -- regArr(to_integer(unsigned(internalASelect))) <= RegIn(7 downto 0);
+                -- regArr(0) <= RegIn(7 downto 0);
+                registers(8 * to_integer(unsigned(internalASelect)) + 7 downto
+                          8 * to_integer(unsigned(internalASelect))) 
+                        <= RegIn(7 downto 0);
+
             end if;
 
             --
@@ -119,7 +124,7 @@ begin
                  std_match(IR, OpBST)  or std_match(IR, OpCP) or
                  std_match(IR, OpCPC)  or std_match(IR, OpCPI)) then
 
-                write_reg <= '0';
+                write_reg <= '1';
             else
                 write_reg <= '1';
             end if;
@@ -157,16 +162,15 @@ begin
     internalBSelect(4 downto 0) <= IR(9) & IR(3 downto 0);
 
     -- Assigns output A to the register as determined by internalASelect
-    -- RegAOut <= registers(8 * conv_integer(internalASelect) + 7 downto 
-    --                      8 * conv_integer(internalASelect));
-    RegAOut <= regArr(to_integer(unsigned(internalASelect)));
-
-
+    RegAOut <= registers(8 * to_integer(unsigned(internalASelect)) + 7 downto 
+                         8 * to_integer(unsigned(internalASelect)));
+    -- RegAOut <= regArr(to_integer(unsigned(internalASelect)));
+   
     -- Assigns output B to the register as determined by internalBSelect
-    -- RegBOut <= registers(8 * conv_integer(internalBSelect) + 7 downto
-                         -- 8 * conv_integer(internalBSelect));
+    RegBOut <= registers(8 * to_integer(unsigned(internalBSelect)) + 7 downto
+                         8 * to_integer(unsigned(internalBSelect)));
 
-    RegBOut <= regArr(to_integer(unsigned(internalASelect)));
+    -- RegBOut <= regArr(to_integer(unsigned(internalASelect)));
 
 end regBehavior;
 

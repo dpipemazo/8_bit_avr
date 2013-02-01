@@ -75,17 +75,17 @@ architecture TB_REG_ARCH of REG_tb is
   -- Opcodes that don't write data based on RegIn Line
   --
 
-  constant dontWriteOpSize : integer := 5;
+  constant dontWriteOpSize : integer := 1;
 
   type DONT_WRITE_OP is array (0 to dontWriteOpSize) of std_logic_vector(15 downto 0);
 
   constant dontWriteOp : DONT_WRITE_OP := (
-      OpBCLR,
-      OpBLD,
-      OpBSET,
-      OpBST,
       OpCP,
       OpCPC
+      -- OpBCLR, --
+      -- OpBLD,  --
+      -- OpBSET, --
+      -- OpBST  --
     );
 
   -- type dont_write_op is(
@@ -102,7 +102,7 @@ architecture TB_REG_ARCH of REG_tb is
   -- And don't alter Operand 1 in any abnormal way
   --
 
-  constant writeOpSize : integer := 14;
+  constant writeOpSize : integer := 6;
 
   type WRITE_OP is array (0 to writeOpSize) of std_logic_vector(15 downto 0);
 
@@ -110,18 +110,18 @@ architecture TB_REG_ARCH of REG_tb is
         OpADC,
         OpADD,
         OpAND,
-        OpASR,
-        OpCOM,
-        OpDEC,
-        OpEOR,
-        OpINC,
-        OpLSR,
-        OpNEG,
-        OpOR,
-        OpROR,
-        OpSBC,
-        OpSUB,
-        OpSWAP
+        OpEOR, 
+        OpOR,  
+        OpSBC, 
+        OpSUB
+        -- OpASR, --
+        -- OpCOM, --
+        -- OpDEC, --
+        -- OpINC, --
+        -- OpLSR, --
+        -- OpNEG, --
+        -- OpROR, --
+        -- OpSWAP --
     );
 
   --
@@ -180,6 +180,8 @@ begin
 
   begin
 
+  wait for 11 ns;
+
   -- Check to make sure that we can write to all of our registers, read out of all of
   -- our registers on both lines A and B and make sure that CP doesn't alter any of the
   -- registers. We only test the Add and CP command over all of the possible registers
@@ -197,7 +199,7 @@ begin
         -- If we are past register 0 (and thus have loaded a value into reg j - 1)
         -- Then load register j-1 into RegBOut
         if (j > 0) then
-          temp_b_reg := std_logic_vector(to_unsigned(j+1, temp_b_reg'LENGTH));
+          temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
           temp_op(9) := temp_b_reg(4);
           temp_op(3 downto 0) := temp_b_reg(3 downto 0);
         end if;
@@ -226,6 +228,14 @@ begin
         temp_op  := dontWriteOp(a);
         temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
 
+        -- If we are past register 0 (and thus have loaded a value into reg j - 1)
+        -- Then load register j-1 into RegBOut
+        if (j > 0) then
+          temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
+          temp_op(9) := temp_b_reg(4);
+          temp_op(3 downto 0) := temp_b_reg(3 downto 0);
+        end if;
+
         IR <= temp_op;
 
         wait for 20 ns;
@@ -251,8 +261,8 @@ begin
       -- If we are past register 0 (and thus have loaded a value into reg j - 1)
       -- Then load register j-1 into RegBOut
       if (j > 0) then
-        temp_b_reg := std_logic_vector(to_unsigned(j+1, temp_b_reg'LENGTH));
-        temp_op(9) := temp_b_reg(4);
+        temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
+        temp_op(9) := '1';
         temp_op(3 downto 0) := temp_b_reg(3 downto 0);
       end if;
 
@@ -324,16 +334,21 @@ begin
 
       wait for 20 ns;
 
-      assert(to_integer(unsigned(RegAOut)) = 24 + j*2);
+      assert(to_integer(unsigned(RegAOut)) = 24 + j*2)
+      report "First Half of two clock out wrong"
+      severity ERROR;
 
       wait for 20 ns;
 
-      assert(to_integer(unsigned(RegAOut)) = 24 + j*2 + 1);
+      assert(to_integer(unsigned(RegAOut)) = 24 + j*2 + 1)
+      report "Second Half of two clock out wrong"
+      severity ERROR;
 
     end loop;
   end loop;
 
   END_SIM <= TRUE;
+  wait;
   end process;
 
 
