@@ -76,7 +76,7 @@ begin
     --
     internal_op_b <="00"&IR(7 downto 6)&IR(3 downto 0) when(std_match(IR, OpADIW) or
                                                             std_match(IR, OpSBIW)) else
-                    IR(9 downto 6) & IR(3 downto 0)    when(std_match(IR, OpANDI) or 
+                    IR(11 downto 8) & IR(3 downto 0)    when(std_match(IR, OpANDI) or 
                                                             std_match(IR, OpCPI) or
                                                             std_match(IR, OpORI) or
                                                             std_match(IR, OpSBCI) or
@@ -163,15 +163,12 @@ begin
     --
     -- INSTRUCTIONS: BCLR, BSET
     --
-	 natural_index <= to_integer(unsigned(IR(6 downto 4)));
-    internal_status_reg(natural_index) <= not IR(7) when (
-                        std_match(IR, OpBCLR) or std_match(IR, OpBSET));
+    -- NOTE: implemented in flags section
+    --
+	--natural_index <= to_integer(unsigned(IR(6 downto 4)));
+    --internal_status_reg(natural_index) <= not IR(7) when (
+    --                    std_match(IR, OpBCLR) or std_match(IR, OpBSET));
 
-    --
-    -- INSTRUCTIONS: BLD, BST
-    --
-    internal_status_reg(6) <= OperandA(to_integer(unsigned(IR(2 downto 0)))) when(
-                              std_match(IR, OpBST));
 
     bitset_result   <= OperandA(7 downto 1) & StatReg(6)                        when (std_match(IR(2 downto 0), "000")) else
                        OperandA(7 downto 2) & StatReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")) else
@@ -230,32 +227,39 @@ begin
                                                 std_match(IR, OpADIW)or 
                                                 std_match(IR, OpSBIW)or 
                                                 std_match(IR, OpSUBI)or
-                                                std_match(IR, OpNEG) or -- INC and DEC do not touch the carry flag
                                                 std_match(IR, OpCP)  or
                                                 std_match(IR, OpCPC) or
                                                 std_match(IR, OpCPI) or
-                                                std_match(IR, OpSBCI)or
-                                                std_match(IR, OpCOM)) else
+                                                std_match(IR, OpSBCI)) else
                                shift_carry when(std_match(IR, OpROR) or
                                                 std_match(IR, OpASR) or
                                                 std_match(IR, OpLSR)) else
+                               '1' when( (std_match(IR, OpBSET) and std_match(IR(6 downto 4), "000")) or
+                                          std_match(IR, OpCOM) or 
+                                         (std_match(IR, OpNEG) and not std_match(result, "00000000"))) else
+                               '0' when( (std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "000")) or
+                                         std_match(IR, OpNEG)) else
                                internal_status_reg(0);
 
     --
     -- ZERO FLAG
     --
-    internal_status_reg(1) <= internal_status_reg(1) when(
+    internal_status_reg(1) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "001") ) else
+                                '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "001") ) else
+                                internal_status_reg(1) when(
                                                 std_match(IR, OpBCLR) or
                                                 std_match(IR, OpBLD) or
                                                 std_match(IR, OpBST) or
                                                 std_match(IR, OpBSET) or
                                                 std_match(IR, OpSWAP)) else
-                            not OR_REDUCE(Result);
+                                not OR_REDUCE(Result);
 
     --
     -- NEGATIVE FLAG
     --
-    internal_status_reg(2) <=   internal_status_reg(2) when(
+    internal_status_reg(2) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "010") ) else
+                                '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "010") ) else
+                                internal_status_reg(2) when(
                                                 std_match(IR, OpBCLR) or
                                                 std_match(IR, OpBLD) or
                                                 std_match(IR, OpBST) or
@@ -266,7 +270,9 @@ begin
     --
     -- SIGNED OVERFLOW FLAG
     --
-    internal_status_reg(3) <=   internal_status_reg(3) when(
+    internal_status_reg(3) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "011") ) else
+                                '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "011") ) else
+                                internal_status_reg(3) when(
                                                 std_match(IR, OpBCLR) or
                                                 std_match(IR, OpBLD) or
                                                 std_match(IR, OpBST) or
@@ -282,12 +288,19 @@ begin
                                                 std_match(IR, OpEOR) or
                                                 std_match(IR, OpOR) or
                                                 std_match(IR, OpORI)) else
-                                adder_carries(7) xor adder_carries(6);
+                                adder_carries(7) xor adder_carries(6) when(
+                                                std_match(IR, OpADD) or
+                                                std_match(IR, OpADC) or
+                                                std_match(IR, OpADIW) or
+                                                std_match(IR, OpINC)) else
+                                not adder_carries(7) xor adder_carries(6);
 
     --
     -- SIGN BIT
     --
-    internal_status_reg(4) <=   internal_status_reg(4) when(
+    internal_status_reg(4) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "100") ) else
+                                '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "100") ) else
+                                internal_status_reg(4) when(
                                                 std_match(IR, OpBCLR) or
                                                 std_match(IR, OpBLD) or
                                                 std_match(IR, OpBST) or
@@ -298,17 +311,33 @@ begin
     --
     -- HALF CARRY
     --
-    internal_status_reg(5) <= adder_carries(3) when ( std_match(IR, OpADC) or
-                                                      std_match(IR, OpADD) or
-                                                      std_match(IR, OpCP) or
-                                                      std_match(IR, OpCPC) or
-                                                      std_match(IR, OpCPI) or
-                                                      std_match(IR, OpNEG) or
-                                                      std_match(IR, OpSBC) or
-                                                      std_match(IR, OpSBCI) or
-                                                      std_match(IR, OpSUB) or
-                                                      std_match(IR, OpSUBI)) else
-                              internal_status_reg(5);
+    internal_status_reg(5) <= adder_carries(3) when (   std_match(IR, OpADC) or
+                                                        std_match(IR, OpADD) or
+                                                        std_match(IR, OpNEG)) else
+                              not adder_carries(3) when(std_match(IR, OpCP) or
+                                                        std_match(IR, OpCPC) or
+                                                        std_match(IR, OpCPI) or
+                                                        std_match(IR, OpSBC) or
+                                                        std_match(IR, OpSBCI) or
+                                                        std_match(IR, OpSUB) or
+                                                        std_match(IR, OpSUBI)) else
+                            '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "101") ) else
+                            '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "101") ) else
+                            internal_status_reg(5);
+    --
+    -- INSTRUCTIONS: BLD, BST
+    --
+    internal_status_reg(6) <=   OperandA(to_integer(unsigned(IR(2 downto 0)))) when( std_match(IR, OpBST)) else
+                                '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "110") ) else
+                                '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "110") ) else 
+                                internal_status_reg(6);   
+
+    --
+    -- HANDLE THE 7TH BIT OF THE INTERNAL STATUS REG
+    --
+    internal_status_reg(7) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "111") ) else
+                                '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "111") ) else  
+                                internal_status_reg(7);           
 
 
     -- Clock the internal result to the external result on clock edges

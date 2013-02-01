@@ -130,7 +130,10 @@ begin
 
     end generate;
 
+    -- Invert the carry out based on whether we are adding or subtraction
+
     -- Finally, map the internal carries to the external carry
-	carry <= carries(bitsize downto 1);
+	carry(6 downto 0) <= carries((bitsize - 1) downto 1);
+    carry(7) <= carries(bitsize) xor sub;
 
 end  dataflow;
