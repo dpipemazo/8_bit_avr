@@ -35,7 +35,8 @@
 --  the clk_cycle line can be tied low.
 --
 --  Revision History:
---     31 Jan 13  Sean Keenan       Initial revision.
+--     30 Jan 13  Sean Keenan       Initial revision.
+--     31 Jan 13  Sean Keenan       Massive Debugging + Tons of commenting
 --
 ----------------------------------------------------------------------------
 

@@ -2,10 +2,30 @@
 --
 --  Atmel AVR ALU Test Bench
 --
---  This is the test bench for testing the ATMEL AVR CPU
+--  This is the test bench for testing the ATMEL AVR CPU's ALU Entity
+--
+--  The test bench has one loop which goes over through all of the
+--  instructions that the processor supports. Each time generating random
+--  inputs on the Operand A and B lines. It loops this infinitely, since
+--  each time we run a test on an Instruction we have new values on
+--  Operand A/B. 
+--
+--  Below this we have a test case for each of the different Instructions
+--  that we are intersted in. These are described suffeciently inside the
+--  code, suffice to say each of the instructions performs the operation
+--  itself (in slow/generally non-synthesizable VHDL) and compares it to
+--  the result of the ALU.
+--
+--  In addition there the bottom of the test bench checks all of the status
+--  register flags. Checking the appropriate bit is set based on what command
+--  was run, or otherwise not checking it. Generally the commands can be
+--  grouped into general categories, like "half carry on add" vs "half carry
+--  on subtract". Allowing many commands to be checked more simply.
 --
 --  Revision History:
---     23 Jan 13    Dan Pipe-Mazo   Initial Revision
+--     31 Jan 13    Dan Pipe-Mazo   Initial Revision
+--     31 Jan 13    Dan Pipe-Mazo   Improved commenting
+--     31 Jan 13    Sean Keenan     Header Block
 --
 ----------------------------------------------------------------------------
 

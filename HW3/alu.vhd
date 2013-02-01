@@ -4,8 +4,79 @@
 --
 --  This is the entity which describes the ALU for the ATMEL CPU
 --
+--  This entity contains a few different blocks which each handle different
+--  types of commands and then feed into an output mux which selects the 
+--  appropriate line based on the input command. The same general idea holds
+--  true for the status register as well. We will first describe the
+--  different blocks in our system:
+--
+--  Adder Block : ADD, ADC, SUB, SUBC, ADIW, SBIW, SUBI, NEG, DEC, INC, COM, 
+--                CP, CPC, CPI, SBCI
+--
+--  This block consists of one 8-bit adder(/subtracter). With relatively
+--  straightforward wiring for ADD/ADC/SUB/SUBC/CP/CPC/CPI. It differs
+--  slightly from a standard "adder" block with some of the other commands
+--  For ADIW/SBIW we perform a regular ADI first, followed by an ADC (added
+--  with zero) on the second clock.
+--  For NEG/COM we negate the input, and then either add one (for two's
+--  complement for NEG) by setting the carry flag, or add nothing and just
+--  share the inverter that we use with NEG. (we also make second operand 0)
+--  For DEC/INC we also just set the carry flag to the opposite of what it
+--  normally would be for an addition/subtraction, and make the second operand
+--  zero, so that we either add or subtract 1
+--
+--  Shifter Block: ASR, LSR, ROR
+--
+--  This block shifts results to the right, and sets the carry flag based on
+--  the low bit of operandA. It then sets the high bit of the output to the 
+--  low bit of operandA if ROR, high bit if ASR, or 0 if LSR.
+--
+--  AND Block: AND, ANDI
+--
+--  This block simply takes the AND of OperandA and the internal operand B
+--  line, and puts it on it's own line (read below about internal operand B)
+--
+--  OR Block: OR, ORI
+--
+--  This block simply takes the OR of OperandA and the internal operand B
+--  line, and puts it on it's own line (read below about internal operand B)
+--
+--  XOR block: EOR
+--
+--  This block simply takes the XOR of OperandA and the internal operand B
+--  line, and puts it on it's own line.
+--
+--  SWAP Block: SWAP
+--
+--  Swaps the nibbles on the Operand A and puts it on it's own line
+--
+--  Bit setting Block: BCLR, BSET
+--
+--  Sets the approrpiate bit right on the Flags Mux
+--
+--  Bit Loading Block: BLD
+--
+--  Loads the appropriate bit from the Status Register and puts it into
+--  the output line, without altering the other bits on OperandA
+--
+--  An important note about instructions that use immediates:
+--  In order to simplify logic inside each of the different blocks described
+--  above the operandB is internally changed to the immediate value inside
+--  the ALU. This simplifies much of the internal logic
+--
+--  In addition this block supplies the clk_cycle line to the Register Block,
+--  as mentioned, this is done so that logic isn't duplicated across the two
+--  blocks. This line indicates if we are on the second clock of a two-clock
+--  instruction (specifically ADIW, or SPIW)
+--
+--  To briefly touch on how the flags work, each bit of the status register
+--  is attached to a large mux, which sets the appropriate bit or input line
+--  based on the Block that executed, or the instructions that executed.
+--
 --  Revision History:
 --     Jan 30 13    Dan Pipe-Mazo   BWAAHHHHHHH Inception. 
+--     Jan 31 13    Dan Pipe-Mazo   Comments + debugging 
+--     Jan 31 13    Sean Keenan     Comments + debugging
 --
 ----------------------------------------------------------------------------
     
@@ -165,10 +236,10 @@ begin
     --
     -- NOTE: implemented in flags section
     --
-	--natural_index <= to_integer(unsigned(IR(6 downto 4)));
-    --internal_status_reg(natural_index) <= not IR(7) when (
-    --                    std_match(IR, OpBCLR) or std_match(IR, OpBSET));
 
+    --
+    -- INSTRUCTION: BSET
+    --
 
     bitset_result   <= OperandA(7 downto 1) & StatReg(6)                        when (std_match(IR(2 downto 0), "000")) else
                        OperandA(7 downto 2) & StatReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")) else
