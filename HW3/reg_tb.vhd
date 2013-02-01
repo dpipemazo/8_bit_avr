@@ -36,6 +36,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;   
 
 library isim_temp;
 use isim_temp.opcodes.all;
@@ -75,7 +76,7 @@ architecture TB_REG_ARCH of REG_tb is
   -- Opcodes that don't write data based on RegIn Line
   --
 
-  constant dontWriteOpSize : natural := 5;
+  constant dontWriteOpSize : integer := 5;
 
   type DONT_WRITE_OP is array (0 to dontWriteOpSize) of std_logic_vector(15 downto 0);
 
@@ -102,7 +103,7 @@ architecture TB_REG_ARCH of REG_tb is
   -- And don't alter Operand 1 in any abnormal way
   --
 
-  constant writeOpSize : natural := 14;
+  constant writeOpSize : integer := 14;
 
   type WRITE_OP is array (0 to writeOpSize) of std_logic_vector(15 downto 0);
 
@@ -157,7 +158,7 @@ begin
     -- Unit Under Test port map
   UUT : REG_TEST
     port map(
-      clk           =>  clock,
+      clock         =>  clk,
       IR            =>  IR,
       RegIn         =>  RegIn,
       RegAOut       =>  RegAOut,
@@ -176,18 +177,20 @@ begin
   variable randInt, oldRandInt : integer;
   variable rand: real;                           -- Random real-number value in range 0 to 1.0
 
+  variable a, b : integer;
+
   begin
 
   -- Check to make sure that we can write to all of our registers, read out of all of
   -- our registers on both lines A and B and make sure that CP doesn't alter any of the
   -- registers. We only test the Add and CP command over all of the possible registers
 
-  for dontWrite in dontWriteOp loop
-    for doWrite in writeOp loop
+  for a in 0 to dontWriteOpSize loop
+    for b in 0 to writeOpSize loop
       for j in 0 to 31 loop
 
         -- Load a command that performs a write
-        temp_op  := doWrite;
+        temp_op  := writeOp(b);
 
         -- Use Register j
         temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
@@ -196,8 +199,8 @@ begin
         -- Then load register j-1 into RegBOut
         if (j > 0) then
           temp_b_reg := std_logic_vector(to_unsigned(j+1, temp_b_reg'LENGTH));
-          temp_op(9) <= temp_b_reg(4);
-          temp_op(3 downto 0) <= temp_b_reg(3 downto 0);
+          temp_op(9) := temp_b_reg(4);
+          temp_op(3 downto 0) := temp_b_reg(3 downto 0);
         end if;
 
         IR  <= temp_op;
@@ -221,7 +224,7 @@ begin
 
         -- Check to see if we have written properly (and that we aren't writing)
 
-        temp_op  := dontWrite;
+        temp_op  := dontWriteOp(a);
         temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
 
         IR <= temp_op;
@@ -250,8 +253,8 @@ begin
       -- Then load register j-1 into RegBOut
       if (j > 0) then
         temp_b_reg := std_logic_vector(to_unsigned(j+1, temp_b_reg'LENGTH));
-        temp_op(9) <= temp_b_reg(4);
-        temp_op(3 downto 0) <= temp_b_reg(3 downto 0);
+        temp_op(9) := temp_b_reg(4);
+        temp_op(3 downto 0) := temp_b_reg(3 downto 0);
       end if;
 
       IR  <= temp_op;

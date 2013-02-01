@@ -28,7 +28,6 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.numeric_std.all;
 
 library isim_temp;
@@ -49,7 +48,11 @@ end  REG;
 
 architecture regBehavior of REG is
 
-    signal  Registers       :  std_logic_vector(255 downto 0);
+    type regArrType is array (0 to 31) of std_logic_vector(15 downto 0);
+
+    signal regArr : regArrType;
+
+    signal  vector          :  std_logic_vector(255 downto 0);
     
     signal  internalASelect :  std_logic_vector(4 downto 0);
     signal  internalBSelect :  std_logic_vector(4 downto 0);
@@ -57,8 +60,49 @@ architecture regBehavior of REG is
     signal  is2Cycles       :  boolean;
 
     signal  write_reg       : std_logic;
+	 
+    signal   v0,  v1,  v2,  v3,  v4,  v5,  v6,  v7,  v8,  v9,
+            v10, v11, v12, v13, v14, v15, v16, v17, v18, v19,
+            v20, v21, v22, v23, v24, v25, v26, v27, v28, v29,
+            v30, v31        : std_logic_vector(15 downto 0);
+    
+    variable index          :  integer;
 
 begin
+
+    regArr(0)  <= v0;
+    regArr(1)  <= v1;
+    regArr(2)  <= v2;
+    regArr(3)  <= v3;
+    regArr(4)  <= v4;
+    regArr(5)  <= v5;
+    regArr(6)  <= v6;
+    regArr(7)  <= v7;
+    regArr(8)  <= v8;
+    regArr(9)  <= v9;
+    regArr(10) <= v10;
+    regArr(11) <= v11;
+    regArr(12) <= v12;
+    regArr(13) <= v13;
+    regArr(14) <= v14;
+    regArr(15) <= v15;
+    regArr(16) <= v16;
+    regArr(17) <= v17;
+    regArr(18) <= v18;
+    regArr(19) <= v19;
+    regArr(20) <= v20;
+    regArr(21) <= v21;
+    regArr(22) <= v22;
+    regArr(23) <= v23;
+    regArr(24) <= v24;
+    regArr(25) <= v25;
+    regArr(26) <= v26;
+    regArr(27) <= v27;
+    regArr(28) <= v28;
+    regArr(29) <= v29;
+    regArr(30) <= v30;
+    regArr(31) <= v31;
+
 
     process (clock)
     begin
@@ -67,8 +111,8 @@ begin
 
             -- Only write out to register A if write is high
             if (write_reg = '1')  then
-                Registers(8 * conv_integer(internalASelect) + 7 downto
-                          8 * conv_integer(internalASelect)) <= RegIn(7 downto 0);
+                index := to_integer(unsigned(internalASelect));
+                regArr(index) <= RegIn(7 downto 0);
             end if;
 
             --
@@ -116,12 +160,16 @@ begin
     internalBSelect(4 downto 0) <= IR(9) & IR(3 downto 0);
 
     -- Assigns output A to the register as determined by internalASelect
-    RegAOut <= registers(8 * conv_integer(internalASelect) + 7 downto 
-                         8 * conv_integer(internalASelect));
+    -- RegAOut <= registers(8 * conv_integer(internalASelect) + 7 downto 
+    --                      8 * conv_integer(internalASelect));
+    RegAOut <= regArr(to_integer(unsigned(internalASelect)));
+
 
     -- Assigns output B to the register as determined by internalBSelect
-    RegBOut <= registers(8 * conv_integer(internalBSelect) + 7 downto
-                         8 * conv_integer(internalBSelect));
+    -- RegBOut <= registers(8 * conv_integer(internalBSelect) + 7 downto
+                         -- 8 * conv_integer(internalBSelect));
+
+    RegBOut <= regArr(to_integer(unsigned(internalASelect)));
 
 end regBehavior;
 
@@ -134,6 +182,7 @@ use ieee.numeric_std.all;
 library isim_temp;
 use isim_temp.opcodes.all;
 use isim_temp.alu;
+use isim_temp.reg;
 
 entity  REG_TEST  is
 
