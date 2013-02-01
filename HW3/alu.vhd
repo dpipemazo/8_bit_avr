@@ -316,14 +316,14 @@ begin
     -- HALF CARRY
     --
     internal_status_reg(5) <= adder_carries(3) when (   std_match(IR, OpADC) or
-                                                        std_match(IR, OpADD) or
-                                                        std_match(IR, OpNEG)) else
+                                                        std_match(IR, OpADD)) else
                               not adder_carries(3) when(std_match(IR, OpCP) or
                                                         std_match(IR, OpCPC) or
                                                         std_match(IR, OpCPI) or
                                                         std_match(IR, OpSBC) or
                                                         std_match(IR, OpSBCI) or
                                                         std_match(IR, OpSUB) or
+                                                        std_match(IR, OpNEG) or
                                                         std_match(IR, OpSUBI)) else
                             '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "101") ) else
                             '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "101") ) else

@@ -260,6 +260,10 @@ begin
                     -- SECOND CLOCK, add carry (leaving operandA on the bus)
                     --
 
+                    -- Set operandB to "00000000" for the purpose of checking
+                    --  flags
+                    rand_inptB := "00000000";
+
                     if (StatReg(0) = '1') then
                         expected := std_logic_vector(unsigned(rand_inptA) + 1);
                     else
@@ -334,23 +338,21 @@ begin
                 --
                 elsif ( op = OP_BCLR ) then
 
+                    -- Need to build up the instruction word
+                    temp_op := OpBCLR;
+                    -- Use the bottom 3 bits of random input A to 
+                    --  choose which bit of the status register to 
+                    --  clear
+                    temp_op(6 downto 4) := rand_inptA(2 downto 0);
+
+                    -- Put the instruction on the instruction bus
+                    IR <= temp_op;
+
+                    -- wait for the answer
                     wait for 14 ns;
 
-                --     -- Need to build up the instruction word
-                --     temp_op := OpBCLR;
-                --     -- Use the bottom 3 bits of random input A to 
-                --     --  choose which bit of the status register to 
-                --     --  clear
-                --     temp_op(6 downto 4) := rand_inptA(2 downto 0);
-
-                --     -- Put the instruction on the instruction bus
-                --     IR <= temp_op;
-
-                --     -- wait for the answer
-                --     wait for 14 ns;
-
-                --     -- check the answer
-                --     assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '0') report "Wrong answer random input OpBCLR test";
+                    -- check the answer outside of this loop once the
+                    --  new status register has updated
 
 
                 --
@@ -379,23 +381,22 @@ begin
                 --
                 elsif( op = OP_BSET ) then
 
+                    -- Need to build up the instruction word
+                    temp_op := OpBSET;
+                    -- Use the bottom 3 bits of random input A to 
+                    --  choose which bit of the status register to 
+                    --  clear
+                    temp_op(6 downto 4) := rand_inptA(2 downto 0);
+
+                    -- Put the instruction on the instruction bus
+                    IR <= temp_op;
+
+                    -- wait for the answer
                     wait for 14 ns;
 
-                --     -- Need to build up the instruction word
-                --     temp_op := OpBSET;
-                --     -- Use the bottom 3 bits of random input A to 
-                --     --  choose which bit of the status register to 
-                --     --  clear
-                --     temp_op(6 downto 4) := rand_inptA(2 downto 0);
-
-                --     -- Put the instruction on the instruction bus
-                --     IR <= temp_op;
-
-                --     -- wait for the answer
-                --     wait for 14 ns;
-
-                --     -- check the answer
-                --     assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '1') report "Wrong answer random input OpBSET test";
+                    -- check the answer outside of this loop once the 
+                    --  new status register is locked
+                   
 
                 --
                 -- INSTRUCTION: BST
@@ -412,8 +413,7 @@ begin
                     -- wait for the answer
                     wait for 14 ns;
 
-                    -- check the answer
-                    assert(StatReg(to_integer(unsigned(rand_inptB(2 downto 0)))) = rand_inptA(to_integer(unsigned(rand_inptB(2 downto 0)))) ) report "Wrong answer random input OpBST test";
+                    -- can't check the answer here
 
                 --
                 -- INSTRUCTION: COM
@@ -708,6 +708,13 @@ begin
 
                     wait for 6 ns;
 
+                    --
+                    -- SECOND CLOCK
+                    --
+
+                    -- Set operand B to zero for the purpose of checking flags
+                    rand_inptB := "00000000";
+
                     -- Now need to do the second clock, which is just a subtract
                     --  with carry
                     if (StatReg(0) = '1') then
@@ -787,6 +794,22 @@ begin
                 --  wait the remaining 5 ns for the next clock
                 wait for 6 ns;
 
+                --
+                -- CHECK THE OPERATIONS WHICH AFFECT THE STATUS REGISTER
+                --
+
+                if ( op = OP_BST ) then
+                    -- check the answer
+                    assert(StatReg(6) = rand_inptA(to_integer(unsigned(rand_inptB(2 downto 0)))) ) report "Wrong answer random input OpBST test";
+
+                elsif ( op = OP_BSET ) then
+                     assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '1') report "Wrong answer random input OpBSET test";
+
+                elsif ( op = OP_BCLR ) then
+                    assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '0') report "Wrong answer random input OpBCLR test";
+
+                end if;
+
                 -----
                 --
                 -- NOW CHECK THE FLAGS
@@ -865,18 +888,26 @@ begin
                 -- SIGNED OVERFLOW FLAG
                 --
 
-                if ( op = OP_ADC  or op = OP_ADD or op = OP_ADIW or 
-                     op = OP_INC ) then
+                if ( op = OP_ADC  or op = OP_ADD or op = OP_ADIW ) then
 
                     check_bit := (rand_inptA(7) and rand_inptB(7) and not expected(7)) or (not rand_inptA(7) and not rand_inptB(7) and expected(7));
                     assert(StatReg(3) = check_bit) report "Arithmetic add operation Signed Overflow Incorrect";
 
                 elsif(  op = OP_CP   or op = OP_CPC  or op = OP_CPI  or
                         op = OP_SBIW or op = OP_SUB  or op = OP_SUBI or
-                        op = OP_SBC  or op = OP_SBCI or op = OP_DEC) then
+                        op = OP_SBC  or op = OP_SBCI) then
 
                     check_bit := (rand_inptA(7) and not rand_inptB(7) and not expected(7)) or (not rand_inptA(7) and rand_inptB(7) and expected(7));
                     assert(StatReg(3) = check_bit) report "Arithmetic subtract operation Signed Overflow Incorrect";
+
+                elsif( op = OP_DEC ) then
+
+                    check_bit := not expected(7) and expected(6) and expected(5) and expected(4) and expected(3) and expected(2) and expected(1) and expected(0);
+                    assert(StatReg(3) = check_bit) report "Decrement operation Signed Overflow Incorrect";
+
+                elsif( op = OP_INC ) then 
+                    check_bit := expected(7) and not expected(6) and not expected(5) and not expected(4) and not expected(3) and not expected(2) and not expected(1) and not expected(0);
+                    assert(StatReg(3) = check_bit) report "Increment operation Signed Overflow Incorrect";
 
                 elsif( op = OP_NEG ) then
                     check_bit := (expected(7) and not expected(6) and not expected(5) and not expected(4) and not expected(3) and not expected(2) and not expected(1) and not expected(0));
@@ -908,7 +939,7 @@ begin
                 -- HALF CARRY
                 --
 
-                if ( op = OP_ADD  or op = OP_ADC  or op = OP_NEG ) then 
+                if ( op = OP_ADD  or op = OP_ADC ) then 
 
                     check_bit := (rand_inptA(3) and rand_inptB(3)) or (rand_inptB(3) and not expected(3)) or (rand_inptA(3) and not expected(3));
                     assert(StatReg(5) = check_bit) report "half-carry flag incorrect on add"; 
@@ -919,6 +950,12 @@ begin
 
                     check_bit := (not rand_inptA(3) and rand_inptB(3)) or (rand_inptB(3) and expected(3)) or (expected(3) and not rand_inptA(3));
                     assert(StatReg(5) = check_bit) report "half-carry flag incorrect on subtract";
+
+                elsif ( op = OP_NEG ) then
+
+                    check_bit := result(3) or rand_inptA(3);
+                    assert(StatReg(5) = check_bit) report "half-carry flag incorrect on negation";
+
                 
                 end if;
 
