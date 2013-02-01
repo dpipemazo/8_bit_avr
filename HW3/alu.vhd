@@ -40,8 +40,6 @@ end  ALU;
 architecture behavioral of ALU is 
 
 -- Declare internal signals
-signal internal_result : std_logic_vector(7 downto 0);  -- What gets mapped to
-                                                        -- output result on clock edges
 signal internal_status_reg : std_logic_vector(7 downto 0); -- Internal value of the status
    
 -- Intermediate results                                                        -- Register.
@@ -189,7 +187,7 @@ begin
     --
 
     -- When statement to map the correct results to the internal result line
-    internal_result <= adder_result when(   std_match(IR, OpADD)  or 
+    Result <= adder_result          when(   std_match(IR, OpADD)  or 
                                             std_match(IR, OpADC)  or 
                                             std_match(IR, OpSUB)  or 
                                             std_match(IR, OpSBC)  or 
@@ -319,7 +317,6 @@ begin
 
         -- DFF the result and status registers on clock edges
         if (rising_edge(clock)) then
-            Result <= internal_result;
             StatReg <= internal_status_reg;
 
             if ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and (clk_cycle /= '1') ) then
