@@ -122,7 +122,7 @@ begin
 
     adder_Carry_input <= '1'        when (  std_match(IR, OpNEG) or std_match(IR, OpDEC) or
                                             std_match(IR, OpINC)) else
-                         StatReg(7) when ( std_match(IR, OpADC) or std_match(IR, OpSBC) or
+                         StatReg(0) when ( std_match(IR, OpADC) or std_match(IR, OpSBC) or
                                              std_match(IR, OpSBCI) or std_match(IR, OpCPC) or
                                              ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1')) else
                          '0';   --when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0') or
@@ -293,6 +293,10 @@ begin
                                                 std_match(IR, OpADC) or
                                                 std_match(IR, OpADIW) or
                                                 std_match(IR, OpINC)) else
+                                not(not result(7) or result(6) or result(5) or 
+                                        result(4) or result(3) or result(2) or 
+                                        result(1) or result(0)) when (
+                                                std_match(IR, OpNEG)) else
                                 not adder_carries(7) xor adder_carries(6);
 
     --
