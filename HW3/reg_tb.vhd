@@ -34,12 +34,11 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;   
 
-library isim_temp;
-use isim_temp.opcodes.all;
+library work;
+use work.opcodes.all;
 
 entity REG_tb is
 end REG_tb;
@@ -129,7 +128,7 @@ architecture TB_REG_ARCH of REG_tb is
   -- Opcodes that only operate on registers 16 to 31
   --
 
-  constant secondHalfWriteSize : natural := 14;
+  constant secondHalfWriteSize : natural := 3;
 
   type SECOND_HALF_WRITE_OP is array (0 to secondHalfWriteSize) of std_logic_vector(15 downto 0);
 
@@ -143,14 +142,14 @@ architecture TB_REG_ARCH of REG_tb is
   --
   -- Opcodes that take two clocks
   --
-
+  
   constant twoClocksSize : natural := 1;
 
-  type TWO_CLOCKS_SIZE is array (0 to twoClocksSize) of std_logic_vector(15 downto 0);
+  type TWO_CLOCKS is array (0 to twoClocksSize) of std_logic_vector(15 downto 0);
 
-  type twoClocks is (
+  constant twoClocks : TWO_CLOCKS := (
         OpADIW,
-        OpSPIW
+        OpSBIW
   );
 
 begin
@@ -217,7 +216,7 @@ begin
 
         -- If we have 
         if (j > 0) then
-          assert (conv_integer(RegBOut) = oldRandInt) 
+          assert (to_integer(unsigned(RegBOut)) = oldRandInt) 
           report "Non-Writing cmd altered register OR Reg B not valid"
           severity ERROR;
         end if;
@@ -231,7 +230,7 @@ begin
 
         wait for 20 ns;
 
-        assert(conv_integer(RegAOut) = randInt) 
+        assert(to_integer(unsigned(RegAOut)) = randInt) 
         report "Did not store Register Properly"
         severity ERROR;
       end loop;
@@ -240,11 +239,11 @@ begin
   
 
   -- Now look at the registers that only operate on the second half of registers
-  for doWrite in secondHalfWrite loop
+  for a in 0 to secondHalfWriteSize loop
     for j in 0 to 15 loop
 
       -- Load a command that performs a write
-      temp_op  := doWrite;
+      temp_op  := secondHalfWrite(a);
 
       -- Use Register j
       temp_op(7 downto 4) := std_logic_vector(to_unsigned(j, 4));
@@ -271,21 +270,21 @@ begin
 
       -- If we have 
       if (j > 0) then
-        assert (conv_integer(RegBOut) = oldRandInt) 
+        assert (to_integer(unsigned(RegBOut)) = oldRandInt) 
         report "CPI altered register OR Reg B not valid"
         severity ERROR;
       end if;
 
       -- Check to see if we have written properly (and that we aren't writing)
 
-      temp_op  := OP_CPI;
+      temp_op  := OpCPI;
       temp_op(7 downto 4) := std_logic_vector(to_unsigned(j, 4));
 
       IR <= temp_op;
 
       wait for 20 ns;
 
-      assert(conv_integer(RegAOut) = randInt) 
+      assert(to_integer(unsigned(RegAOut)) = randInt) 
       report "Did not store Register Properly with second half reg commands"
       severity ERROR;
     end loop;
@@ -299,7 +298,7 @@ begin
   for j in 24 to 31 loop
 
     -- Load a command that performs a write
-    temp_op  := OP_ADD;
+    temp_op  := OpADD;
 
     -- Use Register j
     temp_op(7 downto 4) := std_logic_vector(to_unsigned(j, 4));
@@ -312,10 +311,10 @@ begin
 
   end loop;
 
-  for longOp in twoClocks loop
+  for a in 0 to twoClocksSize loop
     for j in 0 to 3 loop
 
-      temp_op := longOp;
+      temp_op := twoClocks(a);
 
       temp_op(5 downto 4) := std_logic_vector(to_unsigned(j, 2));
 
@@ -325,11 +324,11 @@ begin
 
       wait for 20 ns;
 
-      assert(conv_integer(RegAOut) = 24 + j*2);
+      assert(to_integer(unsigned(RegAOut)) = 24 + j*2);
 
       wait for 20 ns;
 
-      assert(conv_integer(RegAOut) = 24 + j*2 + 1);
+      assert(to_integer(unsigned(RegAOut)) = 24 + j*2 + 1);
 
     end loop;
   end loop;

@@ -30,8 +30,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library isim_temp;
-use isim_temp.opcodes.all;
+library work;
+use work.opcodes.all;
 
 entity  REG  is
 
@@ -48,7 +48,7 @@ end  REG;
 
 architecture regBehavior of REG is
 
-    type regArrType is array (0 to 31) of std_logic_vector(15 downto 0);
+    type regArrType is array (0 to 31) of std_logic_vector(7 downto 0);
 
     signal regArr : regArrType;
 
@@ -64,9 +64,7 @@ architecture regBehavior of REG is
     signal   v0,  v1,  v2,  v3,  v4,  v5,  v6,  v7,  v8,  v9,
             v10, v11, v12, v13, v14, v15, v16, v17, v18, v19,
             v20, v21, v22, v23, v24, v25, v26, v27, v28, v29,
-            v30, v31        : std_logic_vector(15 downto 0);
-    
-    variable index          :  integer;
+            v30, v31        : std_logic_vector(7 downto 0);
 
 begin
 
@@ -111,8 +109,7 @@ begin
 
             -- Only write out to register A if write is high
             if (write_reg = '1')  then
-                index := to_integer(unsigned(internalASelect));
-                regArr(index) <= RegIn(7 downto 0);
+                regArr(to_integer(unsigned(internalASelect))) <= RegIn(7 downto 0);
             end if;
 
             --
@@ -179,10 +176,10 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.numeric_std.all;
 
-library isim_temp;
-use isim_temp.opcodes.all;
-use isim_temp.alu;
-use isim_temp.reg;
+library work;
+use work.opcodes.all;
+use work.alu;
+use work.reg;
 
 entity  REG_TEST  is
 

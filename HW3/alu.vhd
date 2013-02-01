@@ -16,9 +16,9 @@ use ieee.std_logic_misc.all;
 use ieee.numeric_std.all;
 
 -- Import the custom libraries which Glen gave for this assignment
-library isim_temp;
-use isim_temp.opcodes.all;
-use isim_temp.alu_adder;
+library work;
+use work.opcodes.all;
+use work.alu_adder;
 
 entity  ALU  is
 

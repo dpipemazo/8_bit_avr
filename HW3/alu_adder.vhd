@@ -101,7 +101,7 @@ architecture  dataflow  of  alu_adder  is
     end  component;
     
     signal  internal_B : std_logic_vector( (bitsize - 1) downto 0);
-	 signal carries : std_logic_vector((bitsize - 1) downto 0);
+	 signal carries : std_logic_vector(bitsize downto 0);
 
 begin
 
