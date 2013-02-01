@@ -34,49 +34,6 @@ use ieee.numeric_std.all;
 library isim_temp;
 use isim_temp.opcodes.all;
 
-
-entity  REG_TEST  is
-
-    port(
-        IR        :  in  opcode_word;                   -- Instruction Register
-        RegIn     :  in  std_logic_vector(7 downto 0);  -- input register bus
-        clock     :  in  std_logic;                     -- system clock
-        RegAOut   :  out std_logic_vector(7 downto 0);  -- register bus A out
-        RegBOut   :  out std_logic_vector(7 downto 0)   -- register bus B out
-    );
-
-end  REG_TEST;
-
-architecture RegTestBehavior of REG_TEST is
-
-    signal clk_cycle : std_logic;
-
-    signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
-    signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
-
-    signal internalAOut : std_logic_vector(7 downto 0);
-    signal internalBOut : std_logic_vector(7 downto 0);
-
-
-begin
-
-    REG : entity REG  port map(IR, RegIn, clock, clk_cycle, internalAOut, internalBOut);
-    ALU : entity ALU  port map(IR, internalAOut, internalBOut, clock, Result, StatReg, clk_cycle);
-
-    RegAOut <= internalAOut;
-    RegBOut <= internalBOut;
-
-end architecture ; -- RegTestBehavior
-
-
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.numeric_std.all;
-
-library opcodes;
-use opcodes.opcodes.all;
-
 entity  REG  is
 
     port(
@@ -103,13 +60,10 @@ architecture regBehavior of REG is
 
 begin
 
-    process (clk)
+    process (clock)
     begin
 
-        if (rising_edge(clk) )  then
-
-            -- DFF the clk_cycle
-            clk_cycle_dff <= clk_cycle;
+        if (rising_edge(clock) )  then
 
             -- Only write out to register A if write is high
             if (write_reg = '1')  then
@@ -134,7 +88,7 @@ begin
     end process;
 
     -- Convenience signal that marks when we are processing a 2-clock command (SPIW/ADIW)
-    is2Cycles <= std_match(IR, OpADIW) or std_match(IR, OpSPIW);
+    is2Cycles <= std_match(IR, OpADIW) or std_match(IR, OpSBIW);
 
     -- If we work with two clock instructions, or with ANDI, ORI, SUBI, SBCI
     -- We only work with the second half of registers, and set the input high
@@ -170,4 +124,47 @@ begin
                          8 * conv_integer(internalBSelect));
 
 end regBehavior;
+
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.numeric_std.all;
+
+library isim_temp;
+use isim_temp.opcodes.all;
+use isim_temp.alu;
+
+entity  REG_TEST  is
+
+    port(
+        IR        :  in  opcode_word;                   -- Instruction Register
+        RegIn     :  in  std_logic_vector(7 downto 0);  -- input register bus
+        clock     :  in  std_logic;                     -- system clock
+        RegAOut   :  out std_logic_vector(7 downto 0);  -- register bus A out
+        RegBOut   :  out std_logic_vector(7 downto 0)   -- register bus B out
+    );
+
+end  REG_TEST;
+
+architecture RegTestBehavior of REG_TEST is
+
+    signal clk_cycle : std_logic;
+
+    signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
+    signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
+
+    signal internalAOut : std_logic_vector(7 downto 0);
+    signal internalBOut : std_logic_vector(7 downto 0);
+
+
+begin
+
+    REGTest : entity REG  port map(IR, RegIn, clock, clk_cycle, internalAOut, internalBOut);
+    ALUTest : entity ALU  port map(IR, internalAOut, internalBOut, clock, Result, StatReg, clk_cycle);
+
+    RegAOut <= internalAOut;
+    RegBOut <= internalBOut;
+
+end architecture ; -- RegTestBehavior
 

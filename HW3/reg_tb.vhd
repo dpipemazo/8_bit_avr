@@ -74,53 +74,82 @@ architecture TB_REG_ARCH of REG_tb is
   --
   -- Opcodes that don't write data based on RegIn Line
   --
-  type dont_write_op is(
-      OP_BCLR,
-      OP_BLD,
-      OP_BSET,
-      OP_BST,
-      OP_CP,
-      OP_CPC
-  );
+
+  constant dontWriteOpSize : natural := 5;
+
+  type DONT_WRITE_OP is array (0 to dontWriteOpSize) of std_logic_vector(15 downto 0);
+
+  constant dontWriteOp : DONT_WRITE_OP := (
+      OpBCLR,
+      OpBLD,
+      OpBSET,
+      OpBST,
+      OpCP,
+      OpCPC
+    );
+
+  -- type dont_write_op is(
+  --     OpBCLR,
+  --     OpBLD,
+  --     OpBSET,
+  --     OpBST,
+  --     OpCP,
+  --     OpCPC
+  -- );
 
   --
   -- Opcodes that Write based on the RegIn Line
   -- And don't alter Operand 1 in any abnormal way
   --
-  type write_op is(
-        OP_ADC,
-        OP_ADD,
-        OP_AND,
-        OP_ASR,
-        OP_COM,
-        OP_DEC,
-        OP_EOR,
-        OP_INC,
-        OP_LSR,
-        OP_NEG,
-        OP_OR,
-        OP_ROR,
-        OP_SBC,
-        OP_SUB,
-        OP_SWAP
+
+  constant writeOpSize : natural := 14;
+
+  type WRITE_OP is array (0 to writeOpSize) of std_logic_vector(15 downto 0);
+
+  constant writeOp : WRITE_OP := (
+        OpADC,
+        OpADD,
+        OpAND,
+        OpASR,
+        OpCOM,
+        OpDEC,
+        OpEOR,
+        OpINC,
+        OpLSR,
+        OpNEG,
+        OpOR,
+        OpROR,
+        OpSBC,
+        OpSUB,
+        OpSWAP
     );
 
   --
   -- Opcodes that only operate on registers 16 to 31
   --
-  type second_half_write is (
-        OP_ANDI,
-        OP_ORI,
-        OP_SBCI,
-        OP_SUBI
+
+  constant secondHalfWriteSize : natural := 14;
+
+  type SECOND_HALF_WRITE_OP is array (0 to secondHalfWriteSize) of std_logic_vector(15 downto 0);
+
+  constant secondHalfWrite : SECOND_HALF_WRITE_OP := (
+        OpANDI,
+        OpORI,
+        OpSBCI,
+        OpSUBI
   );
 
   --
   -- Opcodes that take two clocks
   --
-  type two_clocks is (
-        OP_ADIW,
-        OP_SPIW
+
+  constant twoClocksSize : natural := 1;
+
+  type TWO_CLOCKS_SIZE is array (0 to twoClocksSize) of std_logic_vector(15 downto 0);
+
+  type twoClocks is (
+        OpADIW,
+        OpSPIW
   );
 
 begin
@@ -153,8 +182,8 @@ begin
   -- our registers on both lines A and B and make sure that CP doesn't alter any of the
   -- registers. We only test the Add and CP command over all of the possible registers
 
-  for dontWrite in dont_write_op loop
-    for doWrite in write_op loop
+  for dontWrite in dontWriteOp loop
+    for doWrite in writeOp loop
       for j in 0 to 31 loop
 
         -- Load a command that performs a write
@@ -166,7 +195,9 @@ begin
         -- If we are past register 0 (and thus have loaded a value into reg j - 1)
         -- Then load register j-1 into RegBOut
         if (j > 0) then
-          temp_b_reg = std_logic_vector(to_unsigned(j+1, temp_b_reg'LENGTH));
+          temp_b_reg := std_logic_vector(to_unsigned(j+1, temp_b_reg'LENGTH));
+          temp_op(9) <= temp_b_reg(4);
+          temp_op(3 downto 0) <= temp_b_reg(3 downto 0);
         end if;
 
         IR  <= temp_op;
@@ -206,7 +237,7 @@ begin
   
 
   -- Now look at the registers that only operate on the second half of registers
-  for doWrite in second_half_write loop
+  for doWrite in secondHalfWrite loop
     for j in 0 to 15 loop
 
       -- Load a command that performs a write
@@ -218,7 +249,9 @@ begin
       -- If we are past register 0 (and thus have loaded a value into reg j - 1)
       -- Then load register j-1 into RegBOut
       if (j > 0) then
-        temp_b_reg = std_logic_vector(to_unsigned(j+1, temp_b_reg'LENGTH));
+        temp_b_reg := std_logic_vector(to_unsigned(j+1, temp_b_reg'LENGTH));
+        temp_op(9) <= temp_b_reg(4);
+        temp_op(3 downto 0) <= temp_b_reg(3 downto 0);
       end if;
 
       IR  <= temp_op;
@@ -276,7 +309,7 @@ begin
 
   end loop;
 
-  for longOp in two_clocks loop
+  for longOp in twoClocks loop
     for j in 0 to 3 loop
 
       temp_op := longOp;

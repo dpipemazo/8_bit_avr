@@ -162,18 +162,18 @@ begin
     --
     swap_result <= OperandA(3 downto 0) & OperandA(7 downto 4);
 
-    --
-    -- INSTRUCTIONS: BCLR, BSET
-    --
-	 natural_index <= conv_unsigned((IR(6 downto 4)));
-    internal_status_reg(natural_index) <= not IR(7) when (
-                        std_match(IR, OpBCLR) or std_match(IR, OpBSET));
+  --   --
+  --   -- INSTRUCTIONS: BCLR, BSET
+  --   --
+	 -- natural_index <= conv_unsigned((IR(6 downto 4)));
+  --   internal_status_reg(natural_index) <= not IR(7) when (
+  --                       std_match(IR, OpBCLR) or std_match(IR, OpBSET));
 
-    --
-    -- INSTRUCTIONS: BLD, BST
-    --
-    internal_status_reg(6) <= OperandA(conv_integer(IR(2 downto 0))) when(
-                              std_match(IR, OpBST));
+  --   --
+  --   -- INSTRUCTIONS: BLD, BST
+  --   --
+  --   internal_status_reg(6) <= OperandA(conv_integer(IR(2 downto 0))) when(
+  --                             std_match(IR, OpBST));
 
     bitset_result   <= OperandA(7 downto 1) & StatReg(6)                        when (std_match(IR(2 downto 0), "000")) else
                        OperandA(7 downto 2) & StatReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")) else
