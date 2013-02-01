@@ -8,6 +8,7 @@
 --     Jan 30 13    Dan Pipe-Mazo   BWAAHHHHHHH Inception. 
 --
 ----------------------------------------------------------------------------
+    
 
 -- Import the standard IEEE libraries
 library ieee;
@@ -331,4 +332,34 @@ begin
 
 
 end behavioral;
+
+
+--
+-- Define the testable ALU entity
+--
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity  ALU_TEST  is
+
+    port(
+        IR        :  in  opcode_word;                       -- Instruction Register
+        OperandA  :  in  std_logic_vector(7 downto 0);      -- first operand
+        OperandB  :  in  std_logic_vector(7 downto 0);      -- second operand
+        clock     :  in  std_logic;                         -- system clock
+        Result    :  out std_logic_vector(7 downto 0);      -- ALU result
+        StatReg   :  out std_logic_vector(7 downto 0)       -- status register
+    );
+
+end  ALU_TEST;
+
+architecture arch of ALU_TEST is 
+
+    signal clock_cycle : std_logic;
+
+begin
+    
+    ALUTst: entity ALU port map( IR, OperandA, OperandB, clock, Result, StatReg, clock_cycle);
+
+end arch;
 
