@@ -48,10 +48,6 @@ end  REG;
 
 architecture regBehavior of REG is
 
-    type regArrType is array (0 to 31) of std_logic_vector(7 downto 0);
-
-    signal regArr : regArrType;
-
     signal  registers       :  std_logic_vector(255 downto 0);
     
     signal  internalASelect :  std_logic_vector(4 downto 0);
@@ -60,47 +56,8 @@ architecture regBehavior of REG is
     signal  is2Cycles       :  boolean;
 
     signal  write_reg       : std_logic;
-	 
-    signal   v0,  v1,  v2,  v3,  v4,  v5,  v6,  v7,  v8,  v9,
-            v10, v11, v12, v13, v14, v15, v16, v17, v18, v19,
-            v20, v21, v22, v23, v24, v25, v26, v27, v28, v29,
-            v30, v31        : std_logic_vector(7 downto 0);
 
 begin
-
-    regArr(0)  <= v0;
-    regArr(1)  <= v1;
-    regArr(2)  <= v2;
-    regArr(3)  <= v3;
-    regArr(4)  <= v4;
-    regArr(5)  <= v5;
-    regArr(6)  <= v6;
-    regArr(7)  <= v7;
-    regArr(8)  <= v8;
-    regArr(9)  <= v9;
-    regArr(10) <= v10;
-    regArr(11) <= v11;
-    regArr(12) <= v12;
-    regArr(13) <= v13;
-    regArr(14) <= v14;
-    regArr(15) <= v15;
-    regArr(16) <= v16;
-    regArr(17) <= v17;
-    regArr(18) <= v18;
-    regArr(19) <= v19;
-    regArr(20) <= v20;
-    regArr(21) <= v21;
-    regArr(22) <= v22;
-    regArr(23) <= v23;
-    regArr(24) <= v24;
-    regArr(25) <= v25;
-    regArr(26) <= v26;
-    regArr(27) <= v27;
-    regArr(28) <= v28;
-    regArr(29) <= v29;
-    regArr(30) <= v30;
-    regArr(31) <= v31;
-
 
     process (clock)
     begin

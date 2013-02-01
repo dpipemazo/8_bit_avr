@@ -311,7 +311,7 @@ begin
     temp_op  := OpADD;
 
     -- Use Register j
-    temp_op(7 downto 4) := std_logic_vector(to_unsigned(j, 4));
+    temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
 
     IR  <= temp_op;
 
@@ -332,18 +332,22 @@ begin
 
       RegIn <= std_logic_vector(to_unsigned(24 + j*2, RegIn'LENGTH));
 
-      wait for 20 ns;
+      wait for 18 ns;
 
       assert(to_integer(unsigned(RegAOut)) = 24 + j*2)
       report "First Half of two clock out wrong"
       severity ERROR;
 
-      wait for 20 ns;
+      wait for 2 ns;
+
+      wait for 18 ns;
 
       assert(to_integer(unsigned(RegAOut)) = 24 + j*2 + 1)
       report "Second Half of two clock out wrong"
       severity ERROR;
 
+      wait for 2 ns;
+      
     end loop;
   end loop;
 
