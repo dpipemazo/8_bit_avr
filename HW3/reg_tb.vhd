@@ -1,48 +1,52 @@
 ----------------------------------------------------------------------------
 --
---  Atmel AVR Register Array Test Entity Declaration
+--  Atmel AVR Register Array Test Entity 
 --
---  This is the entity declaration which must be used for building the
---  register array portion of the AVR design for testing.
+--  This is the test Entity for the Register Array. 
+--
+--  It first loads random values into all of the registers, using all of the 
+--  commands that load registers, and then checks to make sure the value was 
+--  correctly stored using all of the commands that don't alter registers, 
+--  and makes sure that these commands don't alter the registers. 
+--
+--  It then goes on to test the special cases, where some instructions only 
+--  operate on the upper half of registers, performing the same tests as
+--  above
+--
+--  It then goes on to check that ADIW and SBIW work as intended, over two 
+--  clocks. In this case it sets all of the registers to their index 
+--  (ie register 5 = 0x05). While doing this it ensures that OpBCLR/OpBSET
+--  do not overwrite other registers when they are run (but don't need
+--  to output any valid registers on RegAOut or RegBOut)
+--
+--  When running the test vector a warning will appear:
+--    "Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0"
+--  This is a byproduct of some of instructions not having valid bits ("-")
+--  in spaces where the regs.vhd checks for operand B. This isn't an issue
+--  since in system these signals will always have values, and infact by
+--  not throwing errors on asserts when we are passing these values means
+--  that our system doesn't care about these values, when it infact shouldn't
+--  care about these values (which is good!)
 --
 --  Revision History:
---     17 Apr 98  Glen George       Initial revision.
---     20 Apr 98  Glen George       Fixed minor syntax bugs.
---     22 Apr 02  Glen George       Updated comments.
---     18 Apr 04  Glen George       Updated comments and formatting.
---     21 Jan 06  Glen George       Updated comments.
+--     31 Jan 13  Sean Keenan  Initial Revision
 --
 ----------------------------------------------------------------------------
 
 
---
---  REG_TEST
---
---  This is the register array testing interface.  It just brings all the
---  important register array signals out for testing along with the
---  Instruction Register.
---
---  Inputs:
---    IR      - Instruction Register (16 bits)
---    RegIn   - input to the register array (8 bits)
---    clock   - the system clock
---
---  Outputs:
---    RegAOut - register bus A output (8 bits), eventually will connect to ALU
---    RegBOut - register bus B output (8 bits), eventually will connect to ALU
---
-
+-- Include std libraries
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.all;   
+use ieee.math_real.all;       -- Include this for random number generation 
 
+-- Include Glen's opcode definitions
 library work;
 use work.opcodes.all;
 
+-- Define Test Bench Entity
 entity REG_tb is
 end REG_tb;
-
 
 architecture TB_REG_ARCH of REG_tb is
 
@@ -59,10 +63,13 @@ architecture TB_REG_ARCH of REG_tb is
 
   end component;
 
+  -- Internal Clock Signal
   signal CLK          :  std_logic;
 
+  -- Instruction Register
   signal IR           :  opcode_word;
 
+  -- Register signal lines to the Register Array
   signal RegIn        :  std_logic_vector(7 downto 0);
   signal RegAOut      :  std_logic_vector(7 downto 0);
   signal RegBOut      :  std_logic_vector(7 downto 0);
@@ -75,38 +82,36 @@ architecture TB_REG_ARCH of REG_tb is
   -- Opcodes that don't write data based on RegIn Line
   --
 
-  constant dontWriteOpSize : integer := 1;
+  constant dontWriteOpSize : integer := 2;
 
   type DONT_WRITE_OP is array (0 to dontWriteOpSize) of std_logic_vector(15 downto 0);
 
   constant dontWriteOp : DONT_WRITE_OP := (
+      OpBST,    -- Don't write Operand 2
       OpCP,
       OpCPC
-      -- OpBCLR, --
-      -- OpBLD,  --
-      -- OpBSET, --
-      -- OpBST  --
     );
-
-  -- type dont_write_op is(
-  --     OpBCLR,
-  --     OpBLD,
-  --     OpBSET,
-  --     OpBST,
-  --     OpCP,
-  --     OpCPC
-  -- );
 
   --
   -- Opcodes that Write based on the RegIn Line
+  -- All of them output Operand 1, but only after index 8 do they output Operand 2
   -- And don't alter Operand 1 in any abnormal way
   --
 
-  constant writeOpSize : integer := 6;
+  constant writeOpSize : integer := 15; --6;
 
   type WRITE_OP is array (0 to writeOpSize) of std_logic_vector(15 downto 0);
 
   constant writeOp : WRITE_OP := (
+        OpASR,  -- Don't write Operand 2
+        OpBLD,  -- Don't write Operand 2
+        OpCOM,  -- Don't write Operand 2
+        OpDEC,  -- Don't write Operand 2
+        OpINC,  -- Don't write Operand 2
+        OpLSR,  -- Don't write Operand 2
+        OpNEG,  -- Don't write Operand 2
+        OpROR,  -- Don't write Operand 2
+        OpSWAP, -- Don't write Operand 2
         OpADC,
         OpADD,
         OpAND,
@@ -114,16 +119,8 @@ architecture TB_REG_ARCH of REG_tb is
         OpOR,  
         OpSBC, 
         OpSUB
-        -- OpASR, --
-        -- OpCOM, --
-        -- OpDEC, --
-        -- OpINC, --
-        -- OpLSR, --
-        -- OpNEG, --
-        -- OpROR, --
-        -- OpSWAP --
     );
-
+  
   --
   -- Opcodes that only operate on registers 16 to 31
   --
@@ -140,7 +137,7 @@ architecture TB_REG_ARCH of REG_tb is
   );
 
   --
-  -- Opcodes that take two clocks
+  -- Opcodes that take two clocks (ADIW and SBIW)
   --
   
   constant twoClocksSize : natural := 1;
@@ -154,7 +151,7 @@ architecture TB_REG_ARCH of REG_tb is
 
 begin
 
-    -- Unit Under Test port map
+  -- Unit Under Test port map
   UUT : REG_TEST
     port map(
       clock         =>  clk,
@@ -166,20 +163,27 @@ begin
 
   process
 
-  variable j : integer range 0 to 128;
+  -- Index used to determine what register we are looking at in our loops
+  variable j : integer range 0 to 31;
 
+  -- Variable that temporarily stores an op-code that is then transfered to the IR
   variable temp_op : std_logic_vector(15 downto 0);
 
+  -- Variable that we use to temporarly store the address we want to for Register B
+  -- Which we then combine into temp_op, which is then transfered to IR
   variable temp_b_reg : std_logic_vector(4 downto 0);
 
+  -- Variables used for Random Number generation
   variable seed1, seed2: positive;               -- Seed values for random generator
-  variable randInt, oldRandInt : integer;
+  variable randInt, oldRandInt, randInt2 : integer;
   variable rand: real;                           -- Random real-number value in range 0 to 1.0
 
+  -- Indexes used for the constant arrays filled with Instructions
   variable a, b : integer;
 
   begin
 
+  -- Ofset our start such that we start 1 ns after a rising clock edge
   wait for 11 ns;
 
   -- Check to make sure that we can write to all of our registers, read out of all of
@@ -193,12 +197,13 @@ begin
         -- Load a command that performs a write
         temp_op  := writeOp(b);
 
-        -- Use Register j
+        -- Use Register j to write to
         temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
 
         -- If we are past register 0 (and thus have loaded a value into reg j - 1)
+        -- and we are using instructions that use the second operand (a > 8)
         -- Then load register j-1 into RegBOut
-        if (j > 0) then
+        if (j > 0 and a > 8) then
           temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
           temp_op(9) := temp_b_reg(4);
           temp_op(3 downto 0) := temp_b_reg(3 downto 0);
@@ -210,18 +215,22 @@ begin
         oldRandInt := randInt;
 
         -- Generate a random number to store in reg (j)
-        UNIFORM(seed1, seed2, rand);             -- generate random number
-        randInt := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..65536, find integer part
+        UNIFORM(seed1, seed2, rand);                          -- generate random number
+        randInt := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
         RegIn <= std_logic_vector(to_unsigned(randInt, RegIn'LENGTH));  -- convert to std_logic_vector
 
-        wait for 20 ns;
+        wait for 18 ns;
 
-        -- If we have 
-        if (j > 0) then
+        -- If we are past register 0 (and thus have loaded a value into reg j -1)
+        -- and we are using instructions that use the second operand (a > 8)
+        -- Then we should check if B is read correctly
+        if (j > 0 and a > 8) then
           assert (to_integer(unsigned(RegBOut)) = oldRandInt) 
           report "Non-Writing cmd altered register OR Reg B not valid"
           severity ERROR;
         end if;
+
+        wait for 2 ns;
 
         -- Check to see if we have written properly (and that we aren't writing)
 
@@ -229,8 +238,9 @@ begin
         temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
 
         -- If we are past register 0 (and thus have loaded a value into reg j - 1)
+        -- We also want to make sure that the instruction supports a second operand
         -- Then load register j-1 into RegBOut
-        if (j > 0) then
+        if (j > 0 and b > 0) then
           temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
           temp_op(9) := temp_b_reg(4);
           temp_op(3 downto 0) := temp_b_reg(3 downto 0);
@@ -238,11 +248,21 @@ begin
 
         IR <= temp_op;
 
-        wait for 20 ns;
+        -- Generate a random number to store in reg (j)
+        -- We do this to make sure that dontWriteCommands are in fact not writing
+        UNIFORM(seed1, seed2, rand);                           -- generate random number
+        randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
+        RegIn <= std_logic_vector(to_unsigned(randInt2, RegIn'LENGTH));  -- convert to std_logic_vector
 
+        wait for 18 ns;
+
+        -- And then make sure that infact the result has not changed
         assert(to_integer(unsigned(RegAOut)) = randInt) 
-        report "Did not store Register Properly"
+        report "Did not store Register Properly in Write command, or not reading properly"
         severity ERROR;
+
+        wait for 2 ns;
+
       end loop;
     end loop;
   end loop;
@@ -272,85 +292,174 @@ begin
       oldRandInt := randInt;
 
       -- Generate a random number to store in reg (j)
-      UNIFORM(seed1, seed2, rand);             -- generate random number
-      randInt := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..65536, find integer part
+      UNIFORM(seed1, seed2, rand);                          -- generate random number
+      randInt := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
       RegIn <= std_logic_vector(to_unsigned(randInt, RegIn'LENGTH));  -- convert to std_logic_vector
 
-      wait for 20 ns;
+      wait for 18 ns;
 
-      -- If we have 
+      -- Check that Register B is valid if we have data on Register B
       if (j > 0) then
         assert (to_integer(unsigned(RegBOut)) = oldRandInt) 
         report "CPI altered register OR Reg B not valid"
         severity ERROR;
       end if;
 
-      -- Check to see if we have written properly (and that we aren't writing)
+      wait for 2 ns;
 
+      -- Check to see if we have written properly (and that we aren't writing)
+      -- OpCPI is the only Register that operates on only the second half of all registers
+      -- and doesn't write, so lets use that.
       temp_op  := OpCPI;
       temp_op(7 downto 4) := std_logic_vector(to_unsigned(j, 4));
 
       IR <= temp_op;
 
-      wait for 20 ns;
+      -- Generate a random number to store in reg (j)
+      -- We do this to make sure that dontWriteCommands are in fact not writing
+      UNIFORM(seed1, seed2, rand);                           -- generate random number
+      randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
+      RegIn <= std_logic_vector(to_unsigned(randInt2, RegIn'LENGTH));  -- convert to std_logic_vector
 
+      wait for 18 ns;
+
+      -- And then make sure that infact the result has not changed
       assert(to_integer(unsigned(RegAOut)) = randInt) 
       report "Did not store Register Properly with second half reg commands"
       severity ERROR;
+
+      wait for 2 ns;
+
     end loop;
   end loop;
 
-  -- Test ADIW and SBIW commands
-
-  -- First we will load registers 24-31 with their own register number
-  -- So that we can test these instructions more easily
-
-  for j in 24 to 31 loop
-
-    -- Load a command that performs a write
-    temp_op  := OpADD;
-
-    -- Use Register j
-    temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
-
-    IR  <= temp_op;
-
-    RegIn <= std_logic_vector(to_unsigned(j, RegIn'LENGTH));  -- convert to std_logic_vector
-
-    wait for 20 ns;
-
-  end loop;
+  -- Test ADIW and SBIW commands (and BSET/BCLR commands)
 
   for a in 0 to twoClocksSize loop
+
+    -- First we will load registers 24-31 with their own register number
+    -- So that we can test these instructions more easily
+
+    -- While we are at it, we will also make sure that BSET/BCLR don't alter
+    -- the values stored using ADD, while also making sure that the registers
+    -- are set up the values that we expect
+
+    for j in 24 to 31 loop
+
+      -- Load a command that performs a write
+      temp_op  := OpADD;
+
+      -- Use Register j as the RegAOut
+      temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
+      IR    <= temp_op;
+
+      RegIn <= std_logic_vector(to_unsigned(j, RegIn'LENGTH));  -- convert to std_logic_vector
+
+      wait for 20 ns;
+
+      -- Make sure that BCLR does not alter registers
+      RegIn <= "00000000";
+      IR    <= OpBCLR;
+
+      wait for 20 ns;
+
+      -- Make sure that BSET does not alter registers
+      RegIn <= "00000000";
+      IR    <= OpBSET;
+
+      wait for 20 ns;
+
+      -- Run CP such that we can read, but not alter registers
+      temp_op  := OpCP;
+      -- Use Register j as the RegAOut
+      temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
+      IR    <= temp_op;
+
+      wait for 18 ns;
+
+      -- Make sure that "j" is stored as the value inside Register A (aka: j)
+      assert(to_integer(unsigned(RegAOut)) = j) 
+      report "OpBCLR/OpBSET overwrote value (or ADD/CP are broken)"
+      severity ERROR;
+
+      wait for 2 ns;
+
+    end loop;
+
+    -- Loop through the 4 possible register set inputs for ADIW/SBIW
     for j in 0 to 3 loop
 
+      -- Load the two Clock command we are on
       temp_op := twoClocks(a);
 
+      -- Set bits 5/4 based on j
       temp_op(5 downto 4) := std_logic_vector(to_unsigned(j, 2));
-
       IR <= temp_op;
 
-      RegIn <= std_logic_vector(to_unsigned(24 + j*2, RegIn'LENGTH));
+      -- Store new value in register (j * 2)
+      RegIn <= std_logic_vector(to_unsigned(j*2, RegIn'LENGTH));
 
       wait for 18 ns;
 
+      -- Assert that we are reading the proper register
       assert(to_integer(unsigned(RegAOut)) = 24 + j*2)
-      report "First Half of two clock out wrong"
+      report "Output RegA on First clock of ADIW/SBIW out wrong"
       severity ERROR;
 
       wait for 2 ns;
+
+      -- Store new value in register (j * 2) + 1
+      RegIn <= std_logic_vector(to_unsigned(j*2 + 1, RegIn'LENGTH));
 
       wait for 18 ns;
 
+      -- Assert that we are reading the proper register
       assert(to_integer(unsigned(RegAOut)) = 24 + j*2 + 1)
-      report "Second Half of two clock out wrong"
+      report "Output RegA on Second clock of ADIW/SBIW out wrong"
       severity ERROR;
 
       wait for 2 ns;
-      
+
+      -- Now check that the command wrote to the registers properly
+
+      -- Run CP such that we can read, but not alter registers
+      temp_op  := OpCP;
+      -- Get the appropriate register (low bit 0 on first clock)
+      temp_op(8 downto 7) := "11";
+      temp_op(6 downto 5) := std_logic_vector(to_unsigned(j, 2));
+      temp_op(4)          := '0';
+      IR    <= temp_op;
+
+      wait for 18 ns;
+
+      -- Make sure that "j*2" is stored as the value inside Register A
+      assert(to_integer(unsigned(RegAOut)) = j*2) 
+      report "First Write (on First clock) of ADIW/SBIW failed"
+      severity ERROR;
+
+      wait for 2 ns;
+
+      -- Run CP such that we can read, but not alter registers
+      temp_op  := OpCP;
+      -- Get the appropriate register (low bit 1 on first clock)
+      temp_op(8 downto 7) := "11";
+      temp_op(6 downto 5) := std_logic_vector(to_unsigned(j, 2));
+      temp_op(4)          := '1';
+      IR    <= temp_op;
+
+      wait for 18 ns;
+
+      -- Make sure that "j*2" is stored as the value inside Register A
+      assert(to_integer(unsigned(RegAOut)) = j*2 + 1) 
+      report "Second Write (on Second clock) of ADIW/SBIW failed"
+      severity ERROR;
+
+      wait for 2 ns;
+
     end loop;
   end loop;
 
+  -- Finished Simulation
   END_SIM <= TRUE;
   wait;
   end process;
