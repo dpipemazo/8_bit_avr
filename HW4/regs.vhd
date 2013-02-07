@@ -137,7 +137,7 @@ begin
     end process;
 
     -- Internally mux the RegBOut, DataDB and ALUIn to the internal Data Line
-    internalDataWrite <= RegBOut when (std_match(IR, OpMOV)) else
+    internalDataWrite <= internalBSelect when (std_match(IR, OpMOV)) else
                          DataDB when (RegInSel = '1') else
                          ALUIn; --when (RegInSel = '0')
 
@@ -166,7 +166,7 @@ begin
 
     -- Handle the two clock cycle instructions, if we are performing SPIW/ADIW
     -- then the low bit is CycleCnt, otherwise we map the bit normally
-    internalASelect(0) <= CycleCnt when (isImmWord) else
+    internalASelect(0) <= CycleCnt(0) when (isImmWord) else
                           IR(4);
 
     -- Map op code to the B select line (always a direct mapping)
@@ -197,7 +197,8 @@ use ieee.numeric_std.all;
 -- Include Glen's opcode definitions, and the ALU, and REG entities
 library work;
 use work.opcodes.all;
-use work.alu;
+--use work.alu;
+use work.control;
 use work.reg;
 
 --
@@ -241,6 +242,7 @@ architecture RegTestBehavior of REG_TEST is
     signal WriteReg : std_logic;                     -- Write signal for registers
     signal RegInSel : std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
     signal CycleCnt : std_logic_vector(1 downto 0);  -- Clock cycle we are on of instruction
+    signal Addr     : std_logic_vector(15 downto 0);  -- Address bus
 
     -- Signals that are output that we trash
     -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
@@ -248,6 +250,7 @@ architecture RegTestBehavior of REG_TEST is
     signal SP        : std_logic_vector(15 downto 0);
     signal MemCnst   : std_logic_vector(15 downto 0);
     signal XYZ       : std_logic_vector(15 downto 0);
+    signal IR_out    : std_logic_vector(15 downto 0);
 
 
     signal internalAOut : std_logic_vector(7 downto 0);
@@ -256,9 +259,9 @@ architecture RegTestBehavior of REG_TEST is
     -- Constants
     constant reset      : std_logic := '1';          -- Don't reset in these tests
     constant Write_SP   : std_logic := '0';          -- Don't want to write to SP in tests
-    constant write_X    : std_logic := '0';          -- Don't want to write to X in tests
-    constant write_Y    : std_logic := '0';          -- Don't want to write to Y in tests
-    constant write_Z    : std_logic := '0';          -- Don't want to write to Z in tests
+    constant writeX     : std_logic := '0';          -- Don't want to write to X in tests
+    constant writeY     : std_logic := '0';          -- Don't want to write to Y in tests
+    constant writeZ     : std_logic := '0';          -- Don't want to write to Z in tests
     constant selXYZ     : std_logic_vector(1 downto 0)  := "00";-- Don't care about read XYZ
     constant Zero16Bits : std_logic_vector(15 downto 0) := (others => '0');
 
@@ -270,8 +273,9 @@ begin
                                       reset => reset,    -- Reset is held high (not reset)
                                       SP_in => Addr,     -- SP should be off of Addr Bus
                                       Write_SP => Write_SP,
-                                      IR => IR,          -- Same instruction register 
-                                      ProgDB => Zero16Bits -- Not testing "m" instructions 
+                                      IR_in  => IR,
+                                      IR_out => IR_out,    -- Same instruction register 
+                                      ProgDB => Zero16Bits,-- Not testing "m" instructions 
                                       SP => SP,            -- Trash SP
                                       MemCnst => MemCnst,  -- Trash MemCnst
                                       WriteReg => WriteReg, 
