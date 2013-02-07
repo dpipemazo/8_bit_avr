@@ -24,7 +24,7 @@ entity  Memory  is
         SP        :  in  std_logic_vector(15 downto 0); -- Stack Pointer
         RegA      :  in  std_logic_vector(7 downto 0);  -- Register A from regs
         CycleCnt  :  in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
-        MemoryCnst : in  std_logic_vector(15 downto 0); -- Constant to load from memory
+        MemCnst   :  in  std_logic_vector(15 downto 0); -- Constant to load from memory
 
         MemIn     :  inout std_logic_vector(7 downto 0); -- Memory Data Bus
 
