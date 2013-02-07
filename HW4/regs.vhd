@@ -54,18 +54,21 @@ entity  REG  is
 
     port(
         IR        :  in  opcode_word;                   -- Instruction Register
-        MemIn     :  in  std_logic_vector(7 downto 0);  -- Input from Memory Data Bus
+        DataDB    :  in  std_logic_vector(7 downto 0);  -- Input from Memory Data Bus
         ALUIn     :  in  std_logic_vector(7 downto 0);  -- Input from ALU
         clock     :  in  std_logic;                     -- System clock
         CycleCnt  :  in  std_logic_vector(1 downto 0);  -- The clk of an instruction we're on
         WriteReg  :  in  std_logic;                     -- Write signal
         RegInSel  :  in  std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
         selXYZ    :  in  std_logic_vector(1 downto 0);  -- Select read from X/Y/Z
-        writeXYZ  :  in  std_logic_vector(2 downto 0);  -- Write to X/Y/Z from Addr Line
+        writeX    :  in  std_logic;                     -- Write to X from Addr Line
+        writeY    :  in  std_logic;                     -- Write to Y from Addr Line
+        writeZ    :  in  std_logic;                     -- Write to Z from Addr Line
         Addr      :  in  std_logic_vector(15 downto 0); -- Address line (writes to X/Y/Z)
+
         RegAOut   :  out std_logic_vector(7 downto 0);  -- Register bus A out
         RegBOut   :  out std_logic_vector(7 downto 0);  -- Register bus B out
-        XYZAddr   :  out std_logic_vector(15 downto 0)  -- Output from XYZ
+        XYZ       :  out std_logic_vector(15 downto 0)  -- Output from XYZ
     );
 
 end  REG;
@@ -115,17 +118,17 @@ begin
             -- instruction manual
 
             -- Write to X register from Addr line
-            if (writeXYZ(0) = '1')  then
+            if (writeX = '1')  then
                 registers(8 * 27 + 7 downto 8 * 26) <= Addr(15 downto 0);
             end if;
 
             -- Write to Y register from Addr line
-            if (writeXYZ(1) = '1')  then
+            if (writeY = '1')  then
                 registers(8 * 29 + 7 downto 8 * 28) <= Addr(15 downto 0);
             end if;
 
             -- Write to Z register from Addr line
-            if (writeXYZ(2) = '1')  then
+            if (writeZ = '1')  then
                 registers(8 * 31 + 7 downto 8 * 30) <= Addr(15 downto 0);
             end if;
 
@@ -133,9 +136,9 @@ begin
 
     end process;
 
-    -- Internally mux the RegBOut, MemIn and ALUIn to the internal Data Line
+    -- Internally mux the RegBOut, DataDB and ALUIn to the internal Data Line
     internalDataWrite <= RegBOut when (std_match(IR, OpMOV)) else
-                         MemIn when (RegInSel = '1') else
+                         DataDB when (RegInSel = '1') else
                          ALUIn; --when (RegInSel = '0')
 
     -- Convenience signal that marks when we are processing a 2-clock command (SPIW/ADIW)
@@ -179,7 +182,7 @@ begin
 
     -- Select Register to output on XYZ address line based on selXYZ,
     -- We don't care about the case where selXYZ = "01", and output Z
-    XYZAddr <= registers(8 * 27 + 7 downto 8 * 26) when (selXYZ = "11") else
+    XYZ <= registers(8 * 27 + 7 downto 8 * 26) when (selXYZ = "11") else
                registers(8 * 29 + 7 downto 8 * 28) when (selXYZ = "10") else
                registers(8 * 31 + 7 downto 8 * 30); -- when (selXYZ = "00")
 
@@ -245,7 +248,7 @@ architecture RegTestBehavior of REG_TEST is
 
 begin
 
-    MemTest : entity Memory  port map(IR, XYZAddr, SP, RegAOut, CycleCnt, MemCnst, MemIn, selXYZ, writeXYZ, Addr);
+    --MemTest : entity Memory  port map(IR, XYZ, SP, RegAOut, CycleCnt, MemCnst, DataDB, selXYZ, writeXYZ, Addr);
     ConTest : entity Control port map(IR, ProgDB, SP, MemCnst, WriteReg, RegInSel, CycleCnt);
     REGTest : entity REG     port map(IR, RegIn, clock, CycleCnt, internalAOut, internalBOut);
     ALUTest : entity ALU     port map(IR, internalAOut, internalBOut, clock, Result, StatReg);
