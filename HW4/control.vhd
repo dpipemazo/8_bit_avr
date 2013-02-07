@@ -79,7 +79,7 @@ begin
     begin
         if ( rising_edge(clock) ) then
             if (std_match(CycleCnt, num_cycles)) then
-                CycleCnt = 0;
+                CycleCnt = "00";
             else
                 CycleCnt = CycleCnt + 1;
             end if;
@@ -109,7 +109,7 @@ begin
         if ( rising_edge(clock) ) then
             if (Write_SP = '1') then
                 SP <= SP_in;
-            elsif( reset = '1' ) then
+            elsif( reset = '0' ) then
                 SP <= "1111111111111111";
             end if;
         end if;
