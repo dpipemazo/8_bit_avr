@@ -84,9 +84,6 @@ architecture regBehavior of REG is
     -- Convenience boolean to demark when ADIW or SBIW
     signal  isImmWord       :  boolean;
 
-    -- Internal signal to denote when we should write on the next clock
-    signal  write_reg       : std_logic;
-
 begin
 
     process (clock)
@@ -95,10 +92,10 @@ begin
         if (rising_edge(clock) )  then
 
             -- Only write out to register A if write is high
-            -- Since write_reg is Combinational Logic it is still valid from
+            -- Since WriteReg is Combinational Logic it is still valid from
             -- the last Instruction Register Value, and we write to the
             -- appropriate register based on internalASelect
-            if (write_reg = '1')  then
+            if (WriteReg = '1')  then
 
                 -- Write to the appropriate lines on the register
                 -- By putting this in a clock process we are effectively DFF'ing
