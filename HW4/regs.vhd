@@ -58,7 +58,7 @@ entity  REG  is
         ALUIn     :  in  std_logic_vector(7 downto 0);  -- Input from ALU
         clock     :  in  std_logic;                     -- System clock
         CycleCnt  :  in  std_logic_vector(1 downto 0);  -- The clk of an instruction we're on
-        WriteReg  :  in  std_logic;                     -- Write signal
+        WriteReg  :  in  std_logic;                     -- Write signal for registers
         RegInSel  :  in  std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
         selXYZ    :  in  std_logic_vector(1 downto 0);  -- Select read from X/Y/Z
         writeX    :  in  std_logic;                     -- Write to X from Addr Line
@@ -183,8 +183,8 @@ begin
     -- Select Register to output on XYZ address line based on selXYZ,
     -- We don't care about the case where selXYZ = "01", and output Z
     XYZ <= registers(8 * 27 + 7 downto 8 * 26) when (selXYZ = "11") else
-               registers(8 * 29 + 7 downto 8 * 28) when (selXYZ = "10") else
-               registers(8 * 31 + 7 downto 8 * 30); -- when (selXYZ = "00")
+           registers(8 * 29 + 7 downto 8 * 28) when (selXYZ = "10") else
+           registers(8 * 31 + 7 downto 8 * 30); -- when (selXYZ = "00")
 
 end regBehavior;
 
@@ -237,21 +237,49 @@ end  REG_TEST;
 
 architecture RegTestBehavior of REG_TEST is
 
-    signal CycleCnt : std_logic(1 downto 0);  -- Clock cycle we are on if ADIW or SBIW
+    -- Interconnects between Control unit and Register Unit
+    signal WriteReg : std_logic;                     -- Write signal for registers
+    signal RegInSel : std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
+    signal CycleCnt : std_logic_vector(1 downto 0);  -- Clock cycle we are on of instruction
 
-    signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
-    signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
+    -- Signals that are output that we trash
+    -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
+    -- signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
+    signal SP        : std_logic_vector(15 downto 0);
+    signal MemCnst   : std_logic_vector(15 downto 0);
+    signal XYZ       : std_logic_vector(15 downto 0);
+
 
     signal internalAOut : std_logic_vector(7 downto 0);
     signal internalBOut : std_logic_vector(7 downto 0);
+
+    -- Constants
+    constant reset      : std_logic := '1';          -- Don't reset in these tests
+    constant Write_SP   : std_logic := '0';          -- Don't want to write to SP in tests
+    constant write_X    : std_logic := '0';          -- Don't want to write to X in tests
+    constant write_Y    : std_logic := '0';          -- Don't want to write to Y in tests
+    constant write_Z    : std_logic := '0';          -- Don't want to write to Z in tests
+    constant selXYZ     : std_logic_vector(1 downto 0)  := "00";-- Don't care about read XYZ
+    constant Zero16Bits : std_logic_vector(15 downto 0) := (others => '0');
 
 
 begin
 
     --MemTest : entity Memory  port map(IR, XYZ, SP, RegAOut, CycleCnt, MemCnst, DataDB, selXYZ, writeXYZ, Addr);
-    ConTest : entity Control port map(IR, ProgDB, SP, MemCnst, WriteReg, RegInSel, CycleCnt);
-    REGTest : entity REG     port map(IR, RegIn, clock, CycleCnt, internalAOut, internalBOut);
-    ALUTest : entity ALU     port map(IR, internalAOut, internalBOut, clock, Result, StatReg);
+    ConTest : entity Control port map(clock => clock,    -- Clock
+                                      reset => reset,    -- Reset is held high (not reset)
+                                      SP_in => Addr,     -- SP should be off of Addr Bus
+                                      Write_SP => Write_SP,
+                                      IR => IR,          -- Same instruction register 
+                                      ProgDB => Zero16Bits -- Not testing "m" instructions 
+                                      SP => SP,            -- Trash SP
+                                      MemCnst => MemCnst,  -- Trash MemCnst
+                                      WriteReg => WriteReg, 
+                                      RegInSel => RegInSel,
+                                      CycleCnt => CycleCnt);
+    -- Map RegIn to AluIn and DataDB for these tests
+    REGTest : entity REG     port map(IR, RegIn, RegIn, clock, CycleCnt, WriteReg, RegInSel, selXYZ, writeX, writeY, writeZ, Zero16Bits, internalAOut, internalBOut, XYZ);
+    --ALUTest : entity ALU     port map(IR, internalAOut, internalBOut, clock, Result, StatReg);
 
     RegAOut <= internalAOut;
     RegBOut <= internalBOut;
