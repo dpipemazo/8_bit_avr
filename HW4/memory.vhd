@@ -19,18 +19,19 @@ use work.opcodes.all;
 entity  Memory  is
 
     port(
-        IR        :  in  opcode_word;                   -- Instruction Register
-        XYZAddr   :  in  std_logic_vector(15 downto 0); -- Input from XYZ
-        SP        :  in  std_logic_vector(15 downto 0); -- Stack Pointer
-        RegA      :  in  std_logic_vector(7 downto 0);  -- Register A from regs
-        CycleCnt  :  in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
-        MemCnst   :  in  std_logic_vector(15 downto 0); -- Constant to load from memory
-
-        MemIn     :  inout std_logic_vector(7 downto 0); -- Memory Data Bus
-
-        selXYZ    :  out std_logic_vector(1 downto 0);  -- Select read from X/Y/Z
-        writeXYZ  :  out std_logic_vector(2 downto 0);  -- Selects XYZ from Addr Line
-        Addr      :  out std_logic_vector(15 downto 0) -- Address line
+        IR          : in  opcode_word;                   -- Instruction Register
+        XYZ         : in  std_logic_vector(15 downto 0); -- Input from XYZ
+        SP          : in  std_logic_vector(15 downto 0); -- Stack Pointer
+        RegA        : in  std_logic_vector(7 downto 0);  -- Register A from regs
+        CycleCnt    : in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
+        MemCnst     : in  std_logic_vector(15 downto 0); -- Constant to load from memory
+        DataDB      : inout std_logic_vector(7 downto 0); -- Memory Data Bus
+        selXYZ      : out std_logic_vector(1 downto 0);  -- Select read from X/Y/Z
+        writeX      : out std_logic;
+        writeY      : out std_logic;
+        writeZ      : out std_logic;
+        writeSP     : out std_logic;
+        Addr        : out std_logic_vector(15 downto 0) -- Address line
     );
 
 end  Memory;
