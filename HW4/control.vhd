@@ -21,6 +21,7 @@ entity Control is
         Write_SP: in std_logic;                     -- Write new value of SP 
         IR      : inout opcode_word;                -- Instruction register.Will 
                                                     -- delete this after HW4.
+        ProgDB  : in opcode_word;                   -- The program data bus
         SP      : out std_logic_vector(15 downto 0);-- stack pointer
         MemCnst : out std_logic_vector(15 downto 0);-- memory constant from 
                                                     -- LDS and STS instructions
