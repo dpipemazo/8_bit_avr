@@ -5,6 +5,8 @@
 -- Import IEEE libraries
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.std_logic_signed.all;
 
 -- Import the custom libraries which Glen gave
 library work;
@@ -16,10 +18,12 @@ entity Control is
         clock   : in std_logic;                     -- the system clock;
         reset   : in std_logic;                     -- resets SP to all ones and 
                                                     -- the cycle count to 0
-        SP_in   : in std_logic(15 downto 0);        -- New value of SP computed 
+        SP_in   : in std_logic_vector(15 downto 0);        -- New value of SP computed 
                                                     -- by MMU.  
         Write_SP: in std_logic;                     -- Write new value of SP 
-        IR      : inout opcode_word;                -- Instruction register.Will 
+        IR_in   : in opcode_word;                   -- Instruction register.Will 
+                                                    -- delete this after HW4.
+        IR_out  : out opcode_word;                  -- Instruction register.Will 
                                                     -- delete this after HW4.
         ProgDB  : in opcode_word;                   -- The program data bus
         SP      : out std_logic_vector(15 downto 0);-- stack pointer
@@ -29,7 +33,7 @@ entity Control is
         RegInSel: out std_logic;                    -- Which input to use for 
                                                     -- the registers. 0 = ALU, 
                                                     -- 1 = Data Data Bus
-        CycleCnt: out std_logic(1 downto 0)         -- Which cycle of an 
+        CycleCnt: buffer std_logic_vector(1 downto 0)         -- Which cycle of an 
                                                     -- instruction we are on. 
     );
 
@@ -46,30 +50,30 @@ begin
     --
     -- Logic for figuring out how many cycles to take
     --
-    num_cycles     <=   "10" when(  std_match(IR, OpLDS) or 
-                                    std_match(IR, OpSTS) ) else
-                        "01" when(  std_match(IR, OpLDX ) or
-                                    std_match(IR, OpLDXI) or
-                                    std_match(IR, OpLDXD) or
-                                    std_match(IR, OpLDYI) or
-                                    std_match(IR, OpLDYD) or
-                                    std_match(IR, OpLDDY) or
-                                    std_match(IR, OpLDZI) or
-                                    std_match(IR, OpLDZD) or
-                                    std_match(IR, OpLDDZ) or
-                                    std_match(IR, OpSTX ) or
-                                    std_match(IR, OpSTXI) or
-                                    std_match(IR, OpSTXD) or
-                                    std_match(IR, OpSTYI) or
-                                    std_match(IR, OpSTYD) or
-                                    std_match(IR, OpSTDY) or
-                                    std_match(IR, OpSTZI) or
-                                    std_match(IR, OpSTZD) or
-                                    std_match(IR, OpSTDZ) or
-                                    std_match(IR, OpPOP ) or
-                                    std_match(IR, OpPUSH) or
-                                    std_match(IR, OpADIW) or
-                                    std_match(IR, OpSBIW) ) else
+    num_cycles     <=   "10" when(  std_match(IR_in, OpLDS) or 
+                                    std_match(IR_in, OpSTS) ) else
+                        "01" when(  std_match(IR_in, OpLDX ) or
+                                    std_match(IR_in, OpLDXI) or
+                                    std_match(IR_in, OpLDXD) or
+                                    std_match(IR_in, OpLDYI) or
+                                    std_match(IR_in, OpLDYD) or
+                                    std_match(IR_in, OpLDDY) or
+                                    std_match(IR_in, OpLDZI) or
+                                    std_match(IR_in, OpLDZD) or
+                                    std_match(IR_in, OpLDDZ) or
+                                    std_match(IR_in, OpSTX ) or
+                                    std_match(IR_in, OpSTXI) or
+                                    std_match(IR_in, OpSTXD) or
+                                    std_match(IR_in, OpSTYI) or
+                                    std_match(IR_in, OpSTYD) or
+                                    std_match(IR_in, OpSTDY) or
+                                    std_match(IR_in, OpSTZI) or
+                                    std_match(IR_in, OpSTZD) or
+                                    std_match(IR_in, OpSTDZ) or
+                                    std_match(IR_in, OpPOP ) or
+                                    std_match(IR_in, OpPUSH) or
+                                    std_match(IR_in, OpADIW) or
+                                    std_match(IR_in, OpSBIW) ) else
                         "00";
 
     --
@@ -79,9 +83,9 @@ begin
     begin
         if ( rising_edge(clock) ) then
             if (std_match(CycleCnt, num_cycles)) then
-                CycleCnt = "00";
+                CycleCnt <= "00";
             else
-                CycleCnt = CycleCnt + 1;
+                CycleCnt <= CycleCnt + 1;
             end if;
         end if;
     end process counter;
@@ -90,15 +94,15 @@ begin
     -- Implement the write logic
     --
 
-    WriteReg <=  '0' when (std_match(IR, OpBCLR) or std_match(IR, OpBSET) or
-                           std_match(IR, OpBST)  or std_match(IR, OpCP)   or
-                           std_match(IR, OpCPC)  or std_match(IR, OpCPI)  or
-                           std_match(IR, OpSTX)  or std_match(IR, OpSTXI) or
-                           std_match(IR, OpSTXD) or std_match(IR, OpSTYI) or
-                           std_match(IR, OpSTYD) or std_match(IR, OpSTDY) or
-                           std_match(IR, OpSTZI) or std_match(IR, OpSTZD) or
-                           std_match(IR, OpSTDZ) or std_match(IR, OpPOP)  or
-                           std_match(IR, OpPUSH) or std_match(IR, OpSTS) ) else
+    WriteReg <=  '0' when (std_match(IR_in, OpBCLR) or std_match(IR_in, OpBSET) or
+                           std_match(IR_in, OpBST)  or std_match(IR_in, OpCP)   or
+                           std_match(IR_in, OpCPC)  or std_match(IR_in, OpCPI)  or
+                           std_match(IR_in, OpSTX)  or std_match(IR_in, OpSTXI) or
+                           std_match(IR_in, OpSTXD) or std_match(IR_in, OpSTYI) or
+                           std_match(IR_in, OpSTYD) or std_match(IR_in, OpSTDY) or
+                           std_match(IR_in, OpSTZI) or std_match(IR_in, OpSTZD) or
+                           std_match(IR_in, OpSTDZ) or std_match(IR_in, OpPOP)  or
+                           std_match(IR_in, OpPUSH) or std_match(IR_in, OpSTS) ) else
                  '1';
 
     --
@@ -131,22 +135,15 @@ begin
     -- Generate the select logic for the input to the registers
     -- block
     --
-    RegInSel <= "1" when(   std_match(IR, OpLDX ) or std_match(IR, OpLDXI) or
-                            std_match(IR, OpLDXD) or std_match(IR, OpLDYI) or
-                            std_match(IR, OpLDYD) or std_match(IR, OpLDDY) or
-                            std_match(IR, OpLDZI) or std_match(IR, OpLDZD) or
-                            std_match(IR, OpDDZ)  or std_match(IR, OpLDI)  or 
-                            std_match(IR, OpLDS) ) else
-                "0";
+    RegInSel <= '1' when(   std_match(IR_in, OpLDX ) or std_match(IR_in, OpLDXI) or
+                            std_match(IR_in, OpLDXD) or std_match(IR_in, OpLDYI) or
+                            std_match(IR_in, OpLDYD) or std_match(IR_in, OpLDDY) or
+                            std_match(IR_in, OpLDZI) or std_match(IR_in, OpLDZD) or
+                            std_match(IR_in, OpLDDZ) or std_match(IR_in, OpLDI)  or 
+                            std_match(IR_in, OpLDS) ) else
+                '0';
 
+    IR_out <= IR_in;
 
-
-
-
-
-
-    
-
-
-
+end architecture;
 
