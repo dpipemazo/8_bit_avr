@@ -115,7 +115,7 @@ begin
                                         std_match(IR, OpSTZD))) or
                                        (std_match(CycleCnt, "01") and
                                         std_match(IR, OpPUSH))) else
-            <= (others =>'0')&'1' when((std_match(CycleCnt, "01") and(
+                (others =>'0')&'1' when((std_match(CycleCnt, "01") and(
                                         std_match(IR, OpLDXI) or
                                         std_match(IR, OpLDYI) or
                                         std_match(IR, OpLDZI) or
@@ -124,22 +124,23 @@ begin
                                         std_match(IR, OpSTZI))) or
                                        (std_match(CycleCnt, "00") and
                                         std_match(IR, OpPOP)))  else
-            <= (others => '0')&IR(13)&IR(11 downto 10)&IR(2 downto 0) when(
+                (others => '0')&IR(13)&IR(11 downto 10)&IR(2 downto 0) when(
                                         std_match(IR, OpLDDY) or 
                                         std_match(IR, OpLDDZ) or
                                         std_match(IR, OpSTDY) or
                                         std_match(IR, OpSTZD)) else
-            <= (others => '0');
+                (others => '0');
 
     -- Now put the sum of AdderInA and AdderInB on the address bus
-    AddrB <= AdderInA + AdderInB
+    AddrB <= AdderInA + AdderInB;
 
 --
 -- Data Bus Control 
 --
 
     -- Tri-state the bus when we are not writing to it.    
-    DataDB  <=  RegA when(  std_match(IR, OpSTXI) or
+    DataDB  <=  RegA when( (std_match(CycleCnt, "01") and(
+                            std_match(IR, OpSTXI) or
                             std_match(IR, OpSTXD) or
                             std_match(IR, OpSTYI) or
                             std_match(IR, OpSTYD) or
@@ -147,8 +148,9 @@ begin
                             std_match(IR, OpSTZD) or
                             std_match(IR, OpSTDY) or
                             std_match(IR, OpSTDZ) or 
-                            std_match(IR, OpSTS)  or
-                            std_match(IR, OpPUSH) ) else
+                            std_match(IR, OpPUSH))) or 
+                           (std_match(CycleCnt, "10") and
+                            std_match(IR, OpSTS)) ) else
                 (others => 'Z');
 
 
