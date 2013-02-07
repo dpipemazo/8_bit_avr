@@ -19,19 +19,23 @@ use work.opcodes.all;
 entity  Memory  is
 
     port(
+        -- Inputs
         IR          : in  opcode_word;                   -- Instruction Register
         XYZ         : in  std_logic_vector(15 downto 0); -- Input from XYZ
         SP          : in  std_logic_vector(15 downto 0); -- Stack Pointer
         RegA        : in  std_logic_vector(7 downto 0);  -- Register A from regs
         CycleCnt    : in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
         MemCnst     : in  std_logic_vector(15 downto 0); -- Constant to load from memory
-        DataDB      : inout std_logic_vector(7 downto 0); -- Memory Data Bus
+        -- Dealing with memory
+        DataDB      : inout std_logic_vector(7 downto 0);-- Memory Data Bus
+        AddrB       : out std_logic_vector(15 downto 0)  -- Address Bus
+        ReadWrite   : out std_logic;                     -- read/write to main memory
+        -- Dealing with register unit
         selXYZ      : out std_logic_vector(1 downto 0);  -- Select read from X/Y/Z
-        writeX      : out std_logic;
-        writeY      : out std_logic;
-        writeZ      : out std_logic;
-        writeSP     : out std_logic;
-        Addr        : out std_logic_vector(15 downto 0) -- Address line
+        writeX      : out std_logic;                     -- write to the X register
+        writeY      : out std_logic;                     -- write to the Y register
+        writeZ      : out std_logic;                     -- write to the Z register
+        writeSP     : out std_logic                      -- write to the SP register
     );
 
 end  Memory;
