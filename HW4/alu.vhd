@@ -77,6 +77,7 @@
 --     Jan 30 13    Dan Pipe-Mazo   BWAAHHHHHHH Inception. 
 --     Jan 31 13    Dan Pipe-Mazo   Comments + debugging 
 --     Jan 31 13    Sean Keenan     Comments + debugging
+--     Feb 07 13    Sean Keenan     Updated Test bench and cycle_cnt
 --
 ----------------------------------------------------------------------------
     
@@ -101,7 +102,7 @@ entity  ALU  is
         clock     :  in  std_logic;                         -- system clock
         Result    :  buffer std_logic_vector(7 downto 0);      -- ALU result
         StatReg   :  buffer std_logic_vector(7 downto 0);   -- status register
-        cycle_cnt :  in std_logic(1 downto 0)                       -- which clock cycle of a 
+        cycle_cnt :  in std_logic_vector(1 downto 0)                       -- which clock cycle of a 
                                                             --  2 clock instruction we're on
                                                             --  Only matters for ADIW, MUL and SBIW
     );
@@ -442,6 +443,7 @@ use ieee.std_logic_1164.all;
 library work;
 use work.opcodes.all;
 use work.alu;
+use work.Control;
 
 entity  ALU_TEST  is
 
@@ -458,12 +460,43 @@ end  ALU_TEST;
 
 architecture arch of ALU_TEST is 
 
-    signal clock_cycle : std_logic;
+    signal clock_cycle : std_logic_vector(1 downto 0);
     signal result_buffer : std_logic_vector(7 downto 0);
     signal stat_reg_buffer : std_logic_vector( 7 downto 0);
 
+
+
+    -- Signals that are output that we trash
+    -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
+    -- signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
+    signal SP        : std_logic_vector(15 downto 0);
+    signal MemCnst   : std_logic_vector(15 downto 0);
+    signal XYZ       : std_logic_vector(15 downto 0);
+    signal IR_out    : std_logic_vector(15 downto 0);
+    signal Addr      : std_logic_vector(15 downto 0);  -- Address bus
+    signal RegInSel  : std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
+    signal WriteReg  : std_logic;                     -- Write signal for registers
+
+    -- Constants
+    constant reset      : std_logic := '1';          -- Don't reset in these tests
+    constant Write_SP   : std_logic := '0';          -- Don't want to write to SP in tests
+    constant Zero16Bits : std_logic_vector(15 downto 0) := (others => '0');
+
 begin
     
+    ConTest : entity Control port map(clock => clock,    -- Clock
+                                      reset => reset,    -- Reset is held high (not reset)
+                                      SP_in => Addr,     -- SP should be off of Addr Bus
+                                      Write_SP => Write_SP,
+                                      IR_in  => IR,
+                                      IR_out => IR_out,    -- Same instruction register 
+                                      ProgDB => Zero16Bits,-- Not testing "m" instructions 
+                                      SP => SP,            -- Trash SP
+                                      MemCnst => MemCnst,  -- Trash MemCnst
+                                      WriteReg => WriteReg, 
+                                      RegInSel => RegInSel,
+                                      CycleCnt => clock_cycle);
+
     ALUTst: entity ALU port map( IR, OperandA, OperandB, clock, result_buffer, stat_reg_buffer, clock_cycle);
 
     Result <= result_buffer;
