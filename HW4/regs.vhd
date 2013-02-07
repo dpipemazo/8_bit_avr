@@ -61,6 +61,8 @@ entity  REG  is
         WriteReg  :  in  std_logic;                     -- Write signal
         RegInSel  :  in  std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
         selXYZ    :  in  std_logic_vector(1 downto 0);  -- Select read from X/Y/Z
+        writeXYZ  :  in  std_logic_vector(2 downto 0);  -- Write to X/Y/Z from Addr Line
+        Addr      :  in  std_logic_vector(15 downto 0); -- Address line (writes to X/Y/Z)
         RegAOut   :  out std_logic_vector(7 downto 0);  -- Register bus A out
         RegBOut   :  out std_logic_vector(7 downto 0);  -- Register bus B out
         XYZAddr   :  out std_logic_vector(15 downto 0)  -- Output from XYZ
@@ -106,20 +108,24 @@ begin
 
             end if;
 
-            -- Write to the X, Y, or Z registers as selected from enables
+            -- Write to the X, Y, or Z registers as selected from writeXYZ
+            -- We do not know what the result of XYZ is when we are writing to
+            -- X/Y/Z from internalASelect _and_ an undefined output is defined
+            -- as being ok for these types of instructions in the Atmel
+            -- instruction manual
 
             -- Write to X register from Addr line
-            if (enables(0) = '1')  then
+            if (writeXYZ(0) = '1')  then
                 registers(8 * 27 + 7 downto 8 * 26) <= Addr(15 downto 0);
             end if;
 
             -- Write to Y register from Addr line
-            if (enables(1) = '1')  then
+            if (writeXYZ(1) = '1')  then
                 registers(8 * 29 + 7 downto 8 * 28) <= Addr(15 downto 0);
             end if;
 
             -- Write to Z register from Addr line
-            if (enables(2) = '1')  then
+            if (writeXYZ(2) = '1')  then
                 registers(8 * 31 + 7 downto 8 * 30) <= Addr(15 downto 0);
             end if;
 
