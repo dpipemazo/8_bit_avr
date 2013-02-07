@@ -6,7 +6,7 @@
 --
 --  This contains 32 registers, it also reads out or writes the appropriate
 --  registers based on the Instruction Register that is wired to it. It does
---  however require an additional clk_cycle line which is used for the ADIW
+--  however require an additional CycleCnt line which is used for the ADIW
 --  and SBIW instructions. 
 --
 --  The only DFF's in the system are the 32 registers, where everything else is
@@ -23,20 +23,21 @@
 --  internally set to 1.
 --  
 --  For the ADIW and SBIW instructions we have 4 different register sets we can
---  use, (24/25, 26/27, 28/29, 30/31). The clk_cycle line determines the low bit
+--  use, (24/25, 26/27, 28/29, 30/31). The CycleCnt line determines the low bit
 --  of the output register to use (given from the ALU) and the two input bits
 --  are the 2nd lowest and 3rd lowest bits. The rest of the bits are set to 1.
 --
---  In particular we introduced the clk_cycle line to our system because the
---  ALU already has to calculate what clk_cycle we are on and while it ideally
+--  In particular we introduced the CycleCnt line to our system because the
+--  ALU already has to calculate what CycleCnt we are on and while it ideally
 --  the Register Array would be entirely self contained in the interest of
 --  minimizing logic, only the ALU performs this calculation. On top of this,
 --  if performing ADIW/SBIW correctly for the second clock is not relevant
---  the clk_cycle line can be tied low.
+--  the CycleCnt line can be tied low.
 --
 --  Revision History:
 --     30 Jan 13  Sean Keenan       Initial revision.
 --     31 Jan 13  Sean Keenan       Massive Debugging + Tons of commenting
+--      7 Feb 13  Sean Keenan       Updates to work with Memory/Control Unit
 --
 ----------------------------------------------------------------------------
 
@@ -53,11 +54,16 @@ entity  REG  is
 
     port(
         IR        :  in  opcode_word;                   -- Instruction Register
-        RegIn     :  in  std_logic_vector(7 downto 0);  -- Input register bus
+        MemIn     :  in  std_logic_vector(7 downto 0);  -- Input from Memory Data Bus
+        ALUIn     :  in  std_logic_vector(7 downto 0);  -- Input from ALU
         clock     :  in  std_logic;                     -- System clock
-        clk_cycle :  in  std_logic;    -- The first or second clk of instruction
+        CycleCnt  :  in  std_logic_vector(1 downto 0);  -- The clk of an instruction we're on
+        WriteReg  :  in  std_logic;                     -- Write signal
+        RegInSel  :  in  std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
+        selXYZ    :  in  std_logic_vector(1 downto 0);  -- Select read from X/Y/Z
         RegAOut   :  out std_logic_vector(7 downto 0);  -- Register bus A out
-        RegBOut   :  out std_logic_vector(7 downto 0)   -- Register bus B out
+        RegBOut   :  out std_logic_vector(7 downto 0);  -- Register bus B out
+        XYZAddr   :  out std_logic_vector(15 downto 0)  -- Output from XYZ
     );
 
 end  REG;
@@ -72,8 +78,11 @@ architecture regBehavior of REG is
     signal  internalASelect :  std_logic_vector(4 downto 0);
     signal  internalBSelect :  std_logic_vector(4 downto 0);
 
+    -- Internal Data Write line, muxed from RegB, ALU or Memory Data Bus
+    signal  internalDataWrite : std_logic_vector(7 downto 0);
+
     -- Convenience boolean to demark when ADIW or SBIW
-    signal  is2Cycles       :  boolean;
+    signal  isImmWord       :  boolean;
 
     -- Internal signal to denote when we should write on the next clock
     signal  write_reg       : std_logic;
@@ -96,46 +105,62 @@ begin
                 -- each of our registers
                 registers(8 * to_integer(unsigned(internalASelect)) + 7 downto
                           8 * to_integer(unsigned(internalASelect))) 
-                          <= RegIn(7 downto 0);
+                          <= internalDataWrite(7 downto 0);
 
+            end if;
+
+            -- Write to the X, Y, or Z registers as selected from enables
+
+            -- Write to X register from Addr line
+            if (enables(0) = '1')  then
+                registers(8 * 27 + 7 downto 8 * 26) <= Addr(15 downto 0);
+            end if;
+
+            -- Write to Y register from Addr line
+            if (enables(1) = '1')  then
+                registers(8 * 29 + 7 downto 8 * 28) <= Addr(15 downto 0);
+            end if;
+
+            -- Write to Z register from Addr line
+            if (enables(2) = '1')  then
+                registers(8 * 31 + 7 downto 8 * 30) <= Addr(15 downto 0);
             end if;
 
         end if;
 
     end process;
 
-    -- When to not write result (BCLR, BSET, BST, CP, CPC, CPI)
-    -- otherwise we always write what's on RegIn
-	write_reg <= '0' when (std_match(IR, OpBCLR) or std_match(IR, OpBSET) or
-						   std_match(IR, OpBST)  or std_match(IR, OpCP)   or
-						   std_match(IR, OpCPC)  or std_match(IR, OpCPI)) else
-				 '1';
+    -- Internally mux the RegBOut, MemIn and ALUIn to the internal Data Line
+    internalDataWrite <= RegBOut when (std_match(IR, OpMOV)) else
+                         MemIn when (RegInSel = '1') else
+                         ALUIn; --when (RegInSel = '0')
 
     -- Convenience signal that marks when we are processing a 2-clock command (SPIW/ADIW)
-    is2Cycles <= std_match(IR, OpADIW) or std_match(IR, OpSBIW);
+    isImmWord <= std_match(IR, OpADIW) or std_match(IR, OpSBIW);
 
-    -- If we work with two clock instructions, or with ANDI, ORI, SUBI, SBCI
+    -- If we work with two clock instructions, or with ANDI, ORI, SUBI, SBCI, LDI
     -- We only work with the second half of registers, and set the input high
     -- Otherwise we map the bit normally
-    internalASelect(4) <= '1' when (is2Cycles or std_match(IR, OpCPI ) or 
+    internalASelect(4) <= '1' when (isImmWord or std_match(IR, OpCPI ) or 
                                     std_match(IR, OpANDI) or std_match(IR, OpORI ) or
-                                    std_match(IR, OpSUBI) or std_match(IR, OpSBCI)) else
+                                    std_match(IR, OpSUBI) or std_match(IR, OpSBCI) or
+                                    std_match(IR, OpLDI)) else
                           IR(8);
 
     -- If we work with two clock instructions we always use registers 24-31 
     -- Which requires setting bit 4 high, otherwise we map the bit normally
-    internalASelect(3) <= '1' when (is2Cycles) else
+    internalASelect(3) <= '1' when (isImmWord) else
                            IR(7);
 
     -- If we are performing SPIW/ADIW we shift the input to the left by one
     -- since the two bits we get refer to the bits 2 and 1, but are in the
     -- place that bits 1 and 0 are normally. Otherwise we map the bit normally
-    internalASelect(2 downto 1) <=  IR(5 downto 4) when (is2Cycles) else
+    internalASelect(2 downto 1) <=  IR(5 downto 4) when (isImmWord) else
                                     IR(6 downto 5);
 
     -- Handle the two clock cycle instructions, if we are performing SPIW/ADIW
-    -- then the low bit is clk_cycle, otherwise we map the bit normally
-    internalASelect(0) <= clk_cycle when (is2Cycles) else
+    -- then the low bit is CycleCnt, otherwise we map the bit normally
+    internalASelect(0) <= CycleCnt when (isImmWord) else
                           IR(4);
 
     -- Map op code to the B select line (always a direct mapping)
@@ -148,6 +173,12 @@ begin
     -- Assigns output B to the register as determined by internalBSelect
     RegBOut <= registers(8 * to_integer(unsigned(internalBSelect)) + 7 downto
                          8 * to_integer(unsigned(internalBSelect)));
+
+    -- Select Register to output on XYZ address line based on selXYZ,
+    -- We don't care about the case where selXYZ = "01", and output Z
+    XYZAddr <= registers(8 * 27 + 7 downto 8 * 26) when (selXYZ = "11") else
+               registers(8 * 29 + 7 downto 8 * 28) when (selXYZ = "10") else
+               registers(8 * 31 + 7 downto 8 * 30); -- when (selXYZ = "00")
 
 end regBehavior;
 
@@ -173,7 +204,7 @@ use work.reg;
 --  This is included mostly for compatibility with Glen's Code. In addition
 --  our test vectors are written off of this entity.
 --
---  The main thing that this entity does it tie the ALU's clk_cycle output to
+--  The main thing that this entity does it tie the ALU's CycleCnt output to
 --  the REG's entity (an input that the test-bench does not supply)
 --
 --  Inputs:
@@ -200,7 +231,7 @@ end  REG_TEST;
 
 architecture RegTestBehavior of REG_TEST is
 
-    signal clk_cycle : std_logic;  -- Clock cycle we are on if ADIW or SBIW
+    signal CycleCnt : std_logic(1 downto 0);  -- Clock cycle we are on if ADIW or SBIW
 
     signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
     signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
@@ -211,8 +242,8 @@ architecture RegTestBehavior of REG_TEST is
 
 begin
 
-    REGTest : entity REG  port map(IR, RegIn, clock, clk_cycle, internalAOut, internalBOut);
-    ALUTest : entity ALU  port map(IR, internalAOut, internalBOut, clock, Result, StatReg, clk_cycle);
+    REGTest : entity REG  port map(IR, RegIn, clock, CycleCnt, internalAOut, internalBOut);
+    ALUTest : entity ALU  port map(IR, internalAOut, internalBOut, clock, Result, StatReg);
 
     RegAOut <= internalAOut;
     RegBOut <= internalBOut;
