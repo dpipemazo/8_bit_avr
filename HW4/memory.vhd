@@ -26,6 +26,7 @@ entity  Memory  is
         RegA        : in  std_logic_vector(7 downto 0);  -- Register A from regs
         CycleCnt    : in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
         MemCnst     : in  std_logic_vector(15 downto 0); -- Constant to load from memory
+        clock       : in  std_logic;
         -- Dealing with memory
         DataDB      : inout std_logic_vector(7 downto 0);-- Memory Data Bus
         AddrB       : out std_logic_vector(15 downto 0); -- Address Bus
@@ -37,6 +38,7 @@ entity  Memory  is
         writeY      : out std_logic;                     -- write to the Y register
         writeZ      : out std_logic;                     -- write to the Z register
         writeSP     : out std_logic                      -- write to the SP register
+
     );
 
 end  Memory;
@@ -46,6 +48,8 @@ architecture memoryBehavior of Memory is
 -- Signals for the adder
 signal AdderInA : std_logic_vector(15 downto 0);
 signal AdderInB : std_logic_vector(15 downto 0);
+signal clockedRead : std_logic;
+signal clockedWrite : std_logic;
 
 begin
 
@@ -140,6 +144,7 @@ begin
 
     -- Tri-state the bus when we are not writing to it.    
     DataDB  <=  RegA when( (std_match(CycleCnt, "01") and(
+                            std_match(IR, OpSTX)  or
                             std_match(IR, OpSTXI) or
                             std_match(IR, OpSTXD) or
                             std_match(IR, OpSTYI) or
@@ -153,6 +158,68 @@ begin
                             std_match(IR, OpSTS)) ) else
                 (others => 'Z');
 
+--
+-- Memory Read/Write Control
+--
+    ReadWrite : process(clock)
+    begin
 
+    if (rising_edge(clock)) then
+
+        if (std_match(CycleCnt, "00")) then
+            if (std_match(IR, OpLDX) or
+                std_match(IR, OpLDXI) or
+                std_match(IR, OpLDXD) or
+                std_match(IR, OpLDYI) or
+                std_match(IR, OpLDYD) or
+                std_match(IR, OpLDZI) or
+                std_match(IR, OpLDZD) or
+                std_match(IR, OpLDDY) or
+                std_match(IR, OpLDDZ) or
+                std_match(IR, OpPOP)) then
+
+                DataRd = clock;
+            else
+                DataRd = '1';
+            end if;
+
+            if (std_match(IR, OpSTX) or
+                std_match(IR, OpSTXI) or
+                std_match(IR, OpSTXD) or
+                std_match(IR, OpSTYI) or
+                std_match(IR, OpSTYD) or
+                std_match(IR, OpSTZI) or
+                std_match(IR, OpSTZD) or
+                std_match(IR, OpSTDY) or
+                std_match(IR, OpSTDZ) or
+                std_match(IR, OpPUSH)) then
+
+                DataWr = clock;
+            else
+                DataWr = '1';
+            end if;
+
+        elsif (std_match(CycleCnt, "01")) then
+            if (std_match(IR, OpLDS)) then
+                DataRd = '0' or clock;
+            else
+                DataRd = '1';
+            end if;
+
+            if (std_match(IR, OpSTS)) then
+                DataWr = '0' or clock;
+            else
+                DataWr = '1';
+            end if;
+
+        else
+            DataRd = '1';
+            DataWr = '1';
+
+        end if;
+
+    end if;
+
+    end process ReadWrite;
 
 end memoryBehavior;
