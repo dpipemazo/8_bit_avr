@@ -245,8 +245,10 @@ architecture RegTestBehavior of REG_TEST is
 
 begin
 
-    REGTest : entity REG  port map(IR, RegIn, clock, CycleCnt, internalAOut, internalBOut);
-    ALUTest : entity ALU  port map(IR, internalAOut, internalBOut, clock, Result, StatReg);
+    MemTest : entity Memory  port map(IR, XYZAddr, SP, RegAOut, CycleCnt, MemCnst, MemIn, selXYZ, writeXYZ, Addr);
+    ConTest : entity Control port map(IR, ProgDB, SP, MemCnst, WriteReg, RegInSel, CycleCnt);
+    REGTest : entity REG     port map(IR, RegIn, clock, CycleCnt, internalAOut, internalBOut);
+    ALUTest : entity ALU     port map(IR, internalAOut, internalBOut, clock, Result, StatReg);
 
     RegAOut <= internalAOut;
     RegBOut <= internalBOut;
