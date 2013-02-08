@@ -199,31 +199,43 @@ begin
   variable Reg16Val      : std_logic_vector(7 downto 0);
   variable Reg17Val      : std_logic_vector(7 downto 0);
 
+  variable registerToLoadInto : integer;
+
   begin
 
-  DataDB <= (others <= 'Z');
-  ProgDB <= (others <= 'Z');
+  DataDB <= (others => 'Z');
+  ProgDB <= (others => 'Z');
+
+  --
+  -- First Reset signal
+  --
+
+  reset <= '0';
+
+  wait for 20 ns;
 
   -- Ofset our start such that we start 1 ns after a rising clock edge
   wait for 11 ns;
 
-  -- -- Check to make sure that we can write to all of our registers, read out of all of
-  -- -- our registers on both lines A and B and make sure that CP doesn't alter any of the
-  -- -- registers. We only test the Add and CP command over all of the possible registers
+  --
+  -- Check all of the Simple Load and store commands
+  --
 
+  -- Run all of the simple load and store commands with 8 random addresses, and 
+  -- two addresses that are all 1's and all 0's
   for b in 0 to 10 loop
 
 
     UNIFORM(seed1, seed2, rand);                           -- generate random number
     randInt2 := INTEGER(TRUNC(rand*65536.0));                -- rescale to 0..256, find integer part
-    AddressToLoad <= std_logic_vector(to_unsigned(randInt2, AddressToLoad'LENGTH));  -- convert to std_logic_vector
+    AddressToLoad := std_logic_vector(to_unsigned(randInt2, AddressToLoad'LENGTH));  -- convert to std_logic_vector
 
     -- Test the edge cases where the address to load is all zeros and all 1's
     -- This will test our Pre-decrement and post-increment commands more thoroughly
     if b = 0 then
-      AddressToLoad := (others <= '0');
+      AddressToLoad := (others => '0');
     elsif b = 1 then
-      AddressToLoad := (others <= '1');
+      AddressToLoad := (others => '1');
     end if;
 
     -- Loop over the commands in loadStoreSimpleSize
@@ -272,7 +284,7 @@ begin
         -- Generate a value to be put on the DB
         UNIFORM(seed1, seed2, rand);                           -- generate random number
         randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-        DBValue <= std_logic_vector(to_unsigned(randInt2, DBValue'LENGTH));  -- convert to std_logic_vector
+        DBValue := std_logic_vector(to_unsigned(randInt2, DBValue'LENGTH));  -- convert to std_logic_vector
 
         -- We will now load this value into register 16
         -- (for load commands we do this so that we have a random value we overwrite)
@@ -292,11 +304,11 @@ begin
         wait for 20 ns;
 
         -- If a load command we should regenerate DBValue
-        if (a % 2) = 0 then
+        if (a mod 2) = 0 then
           -- Generate a value to be put on the DB
           UNIFORM(seed1, seed2, rand);                           -- generate random number
           randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-          DBValue <= std_logic_vector(to_unsigned(randInt2, DBValue'LENGTH));  -- convert to std_logic_vector
+          DBValue := std_logic_vector(to_unsigned(randInt2, DBValue'LENGTH));  -- convert to std_logic_vector
         end if;
 
         -- Load a command that performs a Load/Store
@@ -311,7 +323,7 @@ begin
 
         -- We need to pre increment if a > 1 and 
         if (a = 2 or a = 3 or a = 6 or a = 7 or a = 10 or a = 11) then
-          AddressToLoad := AddressToLoad + ("0000" & "0000" & "0000" & "0001");
+          AddressToLoad :=std_logic_vector(unsigned(AddressToLoad) + 1);
         end if;
 
         assert(AddressToLoad = DataAB)
@@ -330,7 +342,7 @@ begin
         wait for 6 ns;
 
         -- If a store command then assert that DataDB = DBValue
-        if (a % 2) = 1 then
+        if (a mod 2) = 1 then
 
           assert(DataDB = DBValue)
           report "Data Bus not a valid value 5ns into second clock of Store command (LDI could also be broken)"
@@ -341,7 +353,7 @@ begin
         wait for 6 ns;
 
         -- Check that DataRd or DataWr are low based on command
-        if (a % 2) = 1 then
+        if (a mod 2) = 1 then
           assert(DataRd = '1')
           report "Data Read active on Write command!"
           severity ERROR;
@@ -362,7 +374,7 @@ begin
         wait for 4 ns;
 
         -- If a load command put DBValue on DataDB now
-        if (a % 2) = 0 then
+        if (a mod 2) = 0 then
 
           DataDB <= DBValue;
 
@@ -380,13 +392,13 @@ begin
 
         -- We are now 1 ns ahead of the clk again.
 
-        DataDB <= (others <= 'Z');
+        DataDB <= (others => 'Z');
 
         -- If a load command, then we should check we wrote to the register
         -- Unfortunately, we have to do this by running a Store command, and
         -- checking if the value appears on the bus. 
         -- (which is also potetially buggy)
-        if (a % 2) = 0 then
+        if (a mod 2) = 0 then
           -- Load a command that allows us to read, and shouldn't change X
           temp_op  := OpSTX;
 
@@ -411,7 +423,7 @@ begin
 
         -- We need to post decrement if any of these values
         if (a = 4 or a = 5 or a = 8 or a = 9 or a = 12 or a = 13) then
-          AddressToLoad := AddressToLoad - ("0000" & "0000" & "0000" & "0001");
+          AddressToLoad := std_logic_vector(unsigned(AddressToLoad) - 1);
         end if;
 
       end loop;
@@ -432,7 +444,7 @@ begin
 
     UNIFORM(seed1, seed2, rand);                           -- generate random number
     randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-    Reg17Val <= std_logic_vector(to_unsigned(randInt2, Reg17Val'LENGTH));  -- convert to std_logic_vector
+    Reg17Val := std_logic_vector(to_unsigned(randInt2, Reg17Val'LENGTH));  -- convert to std_logic_vector
 
     -- Load a command that performs a write
     temp_op  := OpLDI;
@@ -454,7 +466,7 @@ begin
     -- Generate a value to be put on the DB
     UNIFORM(seed1, seed2, rand);                           -- generate random number
     randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-    Reg16Val <= std_logic_vector(to_unsigned(randInt2, Reg16Val'LENGTH));  -- convert to std_logic_vector
+    Reg16Val := std_logic_vector(to_unsigned(randInt2, Reg16Val'LENGTH));  -- convert to std_logic_vector
 
     -- Load a command that performs a write
     temp_op  := OpLDI;
@@ -514,278 +526,9 @@ begin
 
   end loop;
 
-  -- for a in 0 to dontWriteOpSize loop
-  --   for b in 0 to writeOpSize loop
-  --     for j in 0 to 31 loop
-
-  --       -- Load a command that performs a write
-  --       temp_op  := writeOp(b);
-
-  --       -- Use Register j to write to
-  --       temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
-
-  --       -- If we are past register 0 (and thus have loaded a value into reg j - 1)
-  --       -- and we are using instructions that use the second operand (a > 8)
-  --       -- Then load register j-1 into RegBOut
-  --       if (j > 0 and a > 8) then
-  --         temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
-  --         temp_op(9) := temp_b_reg(4);
-  --         temp_op(3 downto 0) := temp_b_reg(3 downto 0);
-  --       end if;
-
-  --       IR  <= temp_op;
-
-  --       -- Store the old Rand Int number, since that's what's stored in reg (j - 1)
-  --       oldRandInt := randInt;
-
-  --       -- Generate a random number to store in reg (j)
-  --       UNIFORM(seed1, seed2, rand);                          -- generate random number
-  --       randInt := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-  --       RegIn <= std_logic_vector(to_unsigned(randInt, RegIn'LENGTH));  -- convert to std_logic_vector
-
-  --       wait for 18 ns;
-
-  --       -- If we are past register 0 (and thus have loaded a value into reg j -1)
-  --       -- and we are using instructions that use the second operand (a > 8)
-  --       -- Then we should check if B is read correctly
-  --       if (j > 0 and a > 8) then
-  --         assert (to_integer(unsigned(RegBOut)) = oldRandInt) 
-  --         report "Non-Writing cmd altered register OR Reg B not valid"
-  --         severity ERROR;
-  --       end if;
-
-  --       wait for 2 ns;
-
-  --       -- Check to see if we have written properly (and that we aren't writing)
-
-  --       temp_op  := dontWriteOp(a);
-  --       temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
-
-  --       -- If we are past register 0 (and thus have loaded a value into reg j - 1)
-  --       -- We also want to make sure that the instruction supports a second operand
-  --       -- Then load register j-1 into RegBOut
-  --       if (j > 0 and b > 0) then
-  --         temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
-  --         temp_op(9) := temp_b_reg(4);
-  --         temp_op(3 downto 0) := temp_b_reg(3 downto 0);
-  --       end if;
-
-  --       IR <= temp_op;
-
-  --       -- Generate a random number to store in reg (j)
-  --       -- We do this to make sure that dontWriteCommands are in fact not writing
-  --       UNIFORM(seed1, seed2, rand);                           -- generate random number
-  --       randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-  --       RegIn <= std_logic_vector(to_unsigned(randInt2, RegIn'LENGTH));  -- convert to std_logic_vector
-
-  --       wait for 18 ns;
-
-  --       -- And then make sure that infact the result has not changed
-  --       assert(to_integer(unsigned(RegAOut)) = randInt) 
-  --       report "Did not store Register Properly in Write command, or not reading properly"
-  --       severity ERROR;
-
-  --       wait for 2 ns;
-
-  --     end loop;
-  --   end loop;
-  -- end loop;
-  
-
-  -- -- Now look at the registers that only operate on the second half of registers
-  -- for a in 0 to secondHalfWriteSize loop
-  --   for j in 0 to 15 loop
-
-  --     -- Load a command that performs a write
-  --     temp_op  := secondHalfWrite(a);
-
-  --     -- Use Register j
-  --     temp_op(7 downto 4) := std_logic_vector(to_unsigned(j, 4));
-
-  --     -- If we are past register 0 (and thus have loaded a value into reg j - 1)
-  --     -- Then load register j-1 into RegBOut
-  --     if (j > 0) then
-  --       temp_b_reg := std_logic_vector(to_unsigned(j-1, temp_b_reg'LENGTH));
-  --       temp_op(9) := '1';
-  --       temp_op(3 downto 0) := temp_b_reg(3 downto 0);
-  --     end if;
-
-  --     IR  <= temp_op;
-
-  --     -- Store the old Rand Int number, since that's what's stored in reg (j - 1)
-  --     oldRandInt := randInt;
-
-  --     -- Generate a random number to store in reg (j)
-  --     UNIFORM(seed1, seed2, rand);                          -- generate random number
-  --     randInt := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-  --     RegIn <= std_logic_vector(to_unsigned(randInt, RegIn'LENGTH));  -- convert to std_logic_vector
-
-  --     wait for 18 ns;
-
-  --     -- Check that Register B is valid if we have data on Register B
-  --     if (j > 0) then
-  --       assert (to_integer(unsigned(RegBOut)) = oldRandInt) 
-  --       report "CPI altered register OR Reg B not valid"
-  --       severity ERROR;
-  --     end if;
-
-  --     wait for 2 ns;
-
-  --     -- Check to see if we have written properly (and that we aren't writing)
-  --     -- OpCPI is the only Register that operates on only the second half of all registers
-  --     -- and doesn't write, so lets use that.
-  --     temp_op  := OpCPI;
-  --     temp_op(7 downto 4) := std_logic_vector(to_unsigned(j, 4));
-
-  --     IR <= temp_op;
-
-  --     -- Generate a random number to store in reg (j)
-  --     -- We do this to make sure that dontWriteCommands are in fact not writing
-  --     UNIFORM(seed1, seed2, rand);                           -- generate random number
-  --     randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-  --     RegIn <= std_logic_vector(to_unsigned(randInt2, RegIn'LENGTH));  -- convert to std_logic_vector
-
-  --     wait for 18 ns;
-
-  --     -- And then make sure that infact the result has not changed
-  --     assert(to_integer(unsigned(RegAOut)) = randInt) 
-  --     report "Did not store Register Properly with second half reg commands"
-  --     severity ERROR;
-
-  --     wait for 2 ns;
-
-  --   end loop;
-  -- end loop;
-
-  -- -- Test ADIW and SBIW commands (and BSET/BCLR commands)
-
-  -- for a in 0 to twoClocksSize loop
-
-  --   -- First we will load registers 24-31 with their own register number
-  --   -- So that we can test these instructions more easily
-
-  --   -- While we are at it, we will also make sure that BSET/BCLR don't alter
-  --   -- the values stored using ADD, while also making sure that the registers
-  --   -- are set up the values that we expect
-
-  --   for j in 24 to 31 loop
-
-  --     -- Load a command that performs a write
-  --     temp_op  := OpADD;
-
-  --     -- Use Register j as the RegAOut
-  --     temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
-  --     IR    <= temp_op;
-
-  --     RegIn <= std_logic_vector(to_unsigned(j, RegIn'LENGTH));  -- convert to std_logic_vector
-
-  --     wait for 20 ns;
-
-  --     -- Make sure that BCLR does not alter registers
-  --     RegIn <= "00000000";
-  --     IR    <= OpBCLR;
-
-  --     wait for 20 ns;
-
-  --     -- Make sure that BSET does not alter registers
-  --     RegIn <= "00000000";
-  --     IR    <= OpBSET;
-
-  --     wait for 20 ns;
-
-  --     -- Run CP such that we can read, but not alter registers
-  --     temp_op  := OpCP;
-  --     -- Use Register j as the RegAOut
-  --     temp_op(8 downto 4) := std_logic_vector(to_unsigned(j, 5));
-  --     IR    <= temp_op;
-
-  --     wait for 18 ns;
-
-  --     -- Make sure that "j" is stored as the value inside Register A (aka: j)
-  --     assert(to_integer(unsigned(RegAOut)) = j) 
-  --     report "OpBCLR/OpBSET overwrote value (or ADD/CP are broken)"
-  --     severity ERROR;
-
-  --     wait for 2 ns;
-
-  --   end loop;
-
-  --   -- Loop through the 4 possible register set inputs for ADIW/SBIW
-  --   for j in 0 to 3 loop
-
-  --     -- Load the two Clock command we are on
-  --     temp_op := twoClocks(a);
-
-  --     -- Set bits 5/4 based on j
-  --     temp_op(5 downto 4) := std_logic_vector(to_unsigned(j, 2));
-  --     IR <= temp_op;
-
-  --     -- Store new value in register (j * 2)
-  --     RegIn <= std_logic_vector(to_unsigned(j*2, RegIn'LENGTH));
-
-  --     wait for 18 ns;
-
-  --     -- Assert that we are reading the proper register
-  --     assert(to_integer(unsigned(RegAOut)) = 24 + j*2)
-  --     report "Output RegA on First clock of ADIW/SBIW out wrong"
-  --     severity ERROR;
-
-  --     wait for 2 ns;
-
-  --     -- Store new value in register (j * 2) + 1
-  --     RegIn <= std_logic_vector(to_unsigned(j*2 + 1, RegIn'LENGTH));
-
-  --     wait for 18 ns;
-
-  --     -- Assert that we are reading the proper register
-  --     assert(to_integer(unsigned(RegAOut)) = 24 + j*2 + 1)
-  --     report "Output RegA on Second clock of ADIW/SBIW out wrong"
-  --     severity ERROR;
-
-  --     wait for 2 ns;
-
-  --     -- Now check that the command wrote to the registers properly
-
-  --     -- Run CP such that we can read, but not alter registers
-  --     temp_op  := OpCP;
-  --     -- Get the appropriate register (low bit 0 on first clock)
-  --     temp_op(8 downto 7) := "11";
-  --     temp_op(6 downto 5) := std_logic_vector(to_unsigned(j, 2));
-  --     temp_op(4)          := '0';
-  --     IR    <= temp_op;
-
-  --     wait for 18 ns;
-
-  --     -- Make sure that "j*2" is stored as the value inside Register A
-  --     assert(to_integer(unsigned(RegAOut)) = j*2) 
-  --     report "First Write (on First clock) of ADIW/SBIW failed"
-  --     severity ERROR;
-
-  --     wait for 2 ns;
-
-  --     -- Run CP such that we can read, but not alter registers
-  --     temp_op  := OpCP;
-  --     -- Get the appropriate register (low bit 1 on first clock)
-  --     temp_op(8 downto 7) := "11";
-  --     temp_op(6 downto 5) := std_logic_vector(to_unsigned(j, 2));
-  --     temp_op(4)          := '1';
-  --     IR    <= temp_op;
-
-  --     wait for 18 ns;
-
-  --     -- Make sure that "j*2" is stored as the value inside Register A
-  --     assert(to_integer(unsigned(RegAOut)) = j*2 + 1) 
-  --     report "Second Write (on Second clock) of ADIW/SBIW failed"
-  --     severity ERROR;
-
-  --     wait for 2 ns;
-
-  --   end loop;
-  -- end loop;
-
-  -- -- Finished Simulation
-  -- END_SIM <= TRUE;
-  -- wait;
+  -- Finished Simulation
+  END_SIM <= TRUE;
+  wait;
   end process;
 
 
