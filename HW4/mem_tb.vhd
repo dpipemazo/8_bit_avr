@@ -314,7 +314,10 @@ begin
 
         -- Load/Store to Register 16
         temp_op(8 downto 4) := std_logic_vector(to_unsigned(16, 5));
-
+      
+        -- Save the initial Address to load for the LDDZ, LDDY, STDY, STDZ, LDS, STS commands 
+        initialAddressToLoad := AddressToLoad;
+      
         -- If we are loading with unsigned displacement then calculate what our new address
         -- should be with the displacement, and pass a random displacement into the op
         if (a = 10 or a = 11 or a = 16 or a = 17) then
@@ -326,9 +329,6 @@ begin
           temp_op(2 downto 0) := displacement(2 downto 0);
           temp_op(11 downto 10) := displacement(4 downto 3);
           temp_op(13) := displacement(5);
-
-          -- Save the initial Address to load for the LDDZ, LDDY, STDY, STDZ commands 
-          initialAddressToLoad := AddressToLoad;
 
           AddressToLoad := std_logic_vector(unsigned(AddressToLoad) + unsigned(displacement));
 
@@ -357,6 +357,25 @@ begin
 
         -- Put us 5 ns into a clock
         wait for 6 ns;
+
+        -- If we are LDS or STS then wait an extra clock with "mmmm" on the
+        -- Program Data Bus
+        if (a = 18 or a = 19) then
+          -- Load a random value into Address to Load to be used
+          -- which is the "memory address" that we load on the ProgDB
+          -- We then expect the address to be equal to this value
+          UNIFORM(seed1, seed2, rand);                           -- generate random number
+          randInt2 := INTEGER(TRUNC(rand*65536.0));               -- rescale to 0..65526, find integer part
+          AddressToLoad := std_logic_vector(to_unsigned(randInt2, AddressToLoad'LENGTH));  -- convert to std_logic_vector
+          ProgDB <= AddressToLoad;
+        
+          -- Wait for one full clock
+          wait for 20 ns;
+
+          -- Set the program Data bus back to high impedance
+          ProgDB <= (others => 'Z');
+
+        end if;
 
         -- If a store command then assert that DataDB = DBValue
         if (a mod 2) = 1 then
@@ -440,11 +459,12 @@ begin
 
         -- We need to post increment if a > 1 and 
         if (a = 2 or a = 3 or a = 6 or a = 7 or a = 12 or a = 13) then
-          AddressToLoad :=std_logic_vector(unsigned(AddressToLoad) + 1);
+          AddressToLoad := std_logic_vector(unsigned(AddressToLoad) + 1);
         end if;
 
-        -- Reset Address to load (since we don't alter it) for displacement instructions
-        if (a = 10 or a = 11 or a = 16 or a = 17) then
+        -- Reset Address to load (since we don't alter it) for 
+        -- displacement instructions and for LDS/STS instructions
+        if (a = 10 or a = 11 or a = 16 or a = 17 or a = 18 or a = 19) then
           AddressToLoad := initialAddressToLoad;
         end if;
 
