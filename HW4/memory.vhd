@@ -1,9 +1,55 @@
 ---------------------------------------------------------------------
--- Memory Management Unit
+-- Data Memory Access Unit for Atmel AVR CPU
+--
+--  This unit take the following inputs:
+--      1. The Instruction Register from the control unit
+--      2. A bus containing the current value of either the X, Y or Z register
+--              from the registers unit.
+--      3. The stack pointer from the control unit
+--      4. The output "A" register from the register unit
+--      5. The cycle count from the control unit.
+--      6. The memory constant for LDS and STS instructions from the control
+--              unit.
+--      7. The system clock
+--
+--  This unit outputs the following signals to the system which are used for 
+--     memory accesses:
+--      1. The data data bus
+--      2. The data address bus
+--      3. The data read signal
+--      4. The data write signal
+--
+--  This unit outputs the following signals which are forwarded directly
+--    to the register and control units in order to implement simultaneous 
+--    access to the X, Y, Z and SP registers:
+--      1. A select signal to mux the output of the XYZ register block and
+--          send the desired one to the memory access unit.
+--      2. WriteX, WriteY, WriteZ and WriteSP signals which are send to their
+--          respective registers, and when high indicate that a data write
+--          should be performed.
+--      3. A bus containing new values for X, Y, Z or SP which then in turn
+--          gets written to the respective register when the register's write
+--          signal goes high. 
 --
 --
---  Revision History:
---      7 Feb 13  Sean Keenan       Initial revision.
+--  This unit has the following responsibilities:
+--
+------------------------
+-- 
+------------------------
+--
+--
+--
+---
+----
+-----
+------
+------- REVISION HISTORY
+------
+-----      7 Feb 13  Sean Keenan       Port Definitions
+----       7 Feb 13  Dan Pipe-Mazo     Expanded functonality
+---        7 Feb 13  DaSean PiMaKeen   Debugging!
+--
 ---------------------------------------------------------------------
 
 

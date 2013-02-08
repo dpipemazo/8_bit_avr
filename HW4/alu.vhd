@@ -500,8 +500,39 @@ architecture arch of ALU_TEST is
     signal result_buffer : std_logic_vector(7 downto 0);
     signal stat_reg_buffer : std_logic_vector( 7 downto 0);
 
+
+
+    -- Signals that are output that we trash
+    -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
+    -- signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
+    signal SP        : std_logic_vector(15 downto 0);
+    signal MemCnst   : std_logic_vector(15 downto 0);
+    signal XYZ       : std_logic_vector(15 downto 0);
+    signal IR_out    : std_logic_vector(15 downto 0);
+    signal Addr      : std_logic_vector(15 downto 0);  -- Address bus
+    signal RegInSel  : std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
+    signal WriteReg  : std_logic;                     -- Write signal for registers
+
+    -- Constants
+    constant reset      : std_logic := '1';          -- Don't reset in these tests
+    constant Write_SP   : std_logic := '0';          -- Don't want to write to SP in tests
+    constant Zero16Bits : std_logic_vector(15 downto 0) := (others => '0');
+
 begin
     
+    ConTest : entity Control port map(clock => clock,    -- Clock
+                                      reset => reset,    -- Reset is held high (not reset)
+                                      SP_in => Addr,     -- SP should be off of Addr Bus
+                                      Write_SP => Write_SP,
+                                      IR_in  => IR,
+                                      IR_out => IR_out,    -- Same instruction register 
+                                      ProgDB => Zero16Bits,-- Not testing "m" instructions 
+                                      SP => SP,            -- Trash SP
+                                      MemCnst => MemCnst,  -- Trash MemCnst
+                                      WriteReg => WriteReg, 
+                                      RegInSel => RegInSel,
+                                      CycleCnt => clock_cycle);
+
     ALUTst: entity ALU port map( IR, OperandA, OperandB, clock, result_buffer, stat_reg_buffer, clock_cycle);
 
     Result <= result_buffer;
