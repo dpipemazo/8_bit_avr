@@ -119,7 +119,7 @@ begin
                                         std_match(IR, OpSTZD))) or
                                        (std_match(CycleCnt, "01") and
                                         std_match(IR, OpPUSH))) else
-                (others =>'0')&'1' when((std_match(CycleCnt, "01") and(
+                "0000000000000001" when((std_match(CycleCnt, "01") and(
                                         std_match(IR, OpLDXI) or
                                         std_match(IR, OpLDYI) or
                                         std_match(IR, OpLDZI) or
@@ -128,7 +128,7 @@ begin
                                         std_match(IR, OpSTZI))) or
                                        (std_match(CycleCnt, "00") and
                                         std_match(IR, OpPOP)))  else
-                (others => '0')&IR(13)&IR(11 downto 10)&IR(2 downto 0) when(
+                "0000000000" & IR(13) & IR(11 downto 10) & IR(2 downto 0) when(
                                         std_match(IR, OpLDDY) or 
                                         std_match(IR, OpLDDZ) or
                                         std_match(IR, OpSTDY) or
@@ -136,7 +136,7 @@ begin
                 (others => '0');
 
     -- Now put the sum of AdderInA and AdderInB on the address bus
-    AddrB <= AdderInA + AdderInB;
+    AddrB <= std_logic_vector(unsigned(AdderInA) + unsigned(AdderInB));
 
 --
 -- Data Bus Control 
@@ -178,9 +178,9 @@ begin
                 std_match(IR, OpLDDZ) or
                 std_match(IR, OpPOP)) then
 
-                DataRd = clock;
+                DataRd <= clock;
             else
-                DataRd = '1';
+                DataRd <= '1';
             end if;
 
             if (std_match(IR, OpSTX) or
@@ -194,27 +194,27 @@ begin
                 std_match(IR, OpSTDZ) or
                 std_match(IR, OpPUSH)) then
 
-                DataWr = clock;
+                DataWr <= clock;
             else
-                DataWr = '1';
+                DataWr <= '1';
             end if;
 
         elsif (std_match(CycleCnt, "01")) then
             if (std_match(IR, OpLDS)) then
-                DataRd = '0' or clock;
+                DataRd <= clock;
             else
-                DataRd = '1';
+                DataRd <= '1';
             end if;
 
             if (std_match(IR, OpSTS)) then
-                DataWr = '0' or clock;
+                DataWr <= clock;
             else
-                DataWr = '1';
+                DataWr <= '1';
             end if;
 
         else
-            DataRd = '1';
-            DataWr = '1';
+            DataRd <= '1';
+            DataWr <= '1';
 
         end if;
 
@@ -236,7 +236,7 @@ use ieee.numeric_std.all;
 library work;
 use work.opcodes.all;
 use work.alu;
-use work.regs;
+use work.reg;
 use work.control;
 use work.memory;
 
@@ -311,7 +311,7 @@ begin
                     reset => Reset, 
                     SP_in => Address_Bus, 
                     Write_SP => writeSP,
-                    IR_in => IR  
+                    IR_in => IR,  
                     IR_out => IR_from_control, 
                     ProgDB => ProgDB, 
                     SP => StackPointer, 
@@ -339,5 +339,5 @@ begin
                     writeZ => writeZ, 
                     writeSP => writeSP
                 );
-                 
+
 end architecture;

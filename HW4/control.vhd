@@ -6,7 +6,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_signed.all;
 
 -- Import the custom libraries which Glen gave
 library work;
@@ -85,7 +84,7 @@ begin
             if (CycleCnt = "UU" or std_match(CycleCnt, num_cycles)) then
                 CycleCnt <= "00";
             else
-                CycleCnt <= CycleCnt + 1;
+                CycleCnt <= std_logic_vector(unsigned(CycleCnt) + 1);
             end if;
         end if;
     end process counter;
