@@ -228,7 +228,8 @@ begin
                             std_match(IR_in, OpLDXD) or std_match(IR_in, OpLDYI) or
                             std_match(IR_in, OpLDYD) or std_match(IR_in, OpLDDY) or
                             std_match(IR_in, OpLDZI) or std_match(IR_in, OpLDZD) or
-                            std_match(IR_in, OpLDDZ) or std_match(IR_in, OpLDS) ) else
+                            std_match(IR_in, OpLDDZ) or std_match(IR_in, OpLDS) or
+                            std_match(IR_in, OpPOP)) else
                 -- If not an instruction above, use the ALU output as input
                 --  to the register arrays. 
                 '0';
