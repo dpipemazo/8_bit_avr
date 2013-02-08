@@ -37,8 +37,9 @@ entity  Memory  is
         writeX      : out std_logic;                     -- write to the X register
         writeY      : out std_logic;                     -- write to the Y register
         writeZ      : out std_logic;                     -- write to the Z register
-        writeSP     : out std_logic                      -- write to the SP register
-
+        writeSP     : out std_logic;                     -- write to the SP register
+        newXYZ      : out std_logic_vector(15 downto 0)  -- Updated value of XYZ after
+                                                         -- pre/post increment
     );
 
 end  Memory;
@@ -48,6 +49,7 @@ architecture memoryBehavior of Memory is
 -- Signals for the adder
 signal AdderInA : std_logic_vector(15 downto 0);
 signal AdderInB : std_logic_vector(15 downto 0);
+signal AdderResult : std_logic_vector(15 downto 0);
 signal clockedRead : std_logic;
 signal clockedWrite : std_logic;
 
@@ -59,45 +61,41 @@ begin
 
 
     -- Map the select lines of the XYZ mux in the register unit
-    SelXYZ <=   IR(4) & '0' when (  std_match(IR, OpLDDY) or 
+    SelXYZ <=   IR(3) & '0' when (  std_match(IR, OpLDDY) or 
                                     std_match(IR, OpLDDZ) or 
                                     std_match(IR, OpSTDY) or 
                                     std_match(IR, OpSTDZ) ) else
 
-                IR(4 downto 3);
+                IR(3 downto 2);
 
     -- When to write the X register
-    writeX <= '1' when( (std_match(CycleCnt, "01") and (
+    writeX <= '1' when( std_match(CycleCnt, "01") and (
                             std_match(IR, OpLDXI) or 
-                            std_match(IR, OpSTXI))) or 
-                        (std_match(CycleCnt, "00") and (
+                            std_match(IR, OpSTXI) or 
                             std_match(IR, OpLDXD) or
-                            std_match(IR, OpSTXD))) ) else
+                            std_match(IR, OpSTXD)) ) else
                 '0';
 
     -- When to write the Y register
-    writeY <= '1' when( (std_match(CycleCnt, "01") and (
+    writeY <= '1' when( std_match(CycleCnt, "01") and (
                             std_match(IR, OpLDYI) or
-                            std_match(IR, OpSTYI))) or 
-                        (std_match(CycleCnt, "00") and (
+                            std_match(IR, OpSTYI) or 
                             std_match(IR, OpLDYD) or 
-                            std_match(IR, OpSTYD))) ) else
+                            std_match(IR, OpSTYD)) ) else
                 '0';
 
     -- When to write the Z register
-    writeZ <= '1' when( (std_match(CycleCnt, "01") and (
+    writeZ <= '1' when( std_match(CycleCnt, "01") and (
                             std_match(IR, OpLDZI) or
-                            std_match(IR, OpSTZI))) or 
-                        (std_match(CycleCnt, "00") and (
+                            std_match(IR, OpSTZI) or 
                             std_match(IR, OpLDZD) or 
-                            std_match(IR, OpSTZD))) ) else
+                            std_match(IR, OpSTZD)) ) else
                 '0';
 
     -- When to write the SP register
-    writeSP <= '1' when((std_match(CycleCnt, "01") and
-                            std_match(IR, OpPUSH)) or 
-                        (std_match(CycleCnt, "00") and 
-                            std_match(IR, OpPOP))) else
+    writeSP <= '1' when(std_match(CycleCnt, "01") and (
+                            std_match(IR, OpPUSH) or 
+                            std_match(IR, OpPOP)) ) else
                 '0';
 
 --
@@ -110,24 +108,22 @@ begin
                                 std_match(IR, OpLDS)) else
                 XYZ;
 
-    AdderInB <= (others => '1') when(  (std_match(CycleCnt, "00") and(
-                                        std_match(IR, OpLDXD) or
+    AdderInB <= (others => '1') when(   std_match(IR, OpLDXD) or
                                         std_match(IR, OpLDYD) or
                                         std_match(IR, OpLDZD) or
                                         std_match(IR, OpSTXD) or
                                         std_match(IR, OpSTYD) or
-                                        std_match(IR, OpSTZD))) or
+                                        std_match(IR, OpSTZD) or
                                        (std_match(CycleCnt, "01") and
                                         std_match(IR, OpPUSH))) else
-                "0000000000000001" when((std_match(CycleCnt, "01") and(
+                "0000000000000001" when(std_match(IR, OpPOP) or 
+                                       (std_match(CycleCnt, "01") and(
                                         std_match(IR, OpLDXI) or
                                         std_match(IR, OpLDYI) or
                                         std_match(IR, OpLDZI) or
                                         std_match(IR, OpSTXI) or
                                         std_match(IR, OpSTYI) or
-                                        std_match(IR, OpSTZI))) or
-                                       (std_match(CycleCnt, "00") and
-                                        std_match(IR, OpPOP)))  else
+                                        std_match(IR, OpSTZI)))) else
                 "0000000000" & IR(13) & IR(11 downto 10) & IR(2 downto 0) when(
                                         std_match(IR, OpLDDY) or 
                                         std_match(IR, OpLDDZ) or
@@ -136,7 +132,20 @@ begin
                 (others => '0');
 
     -- Now put the sum of AdderInA and AdderInB on the address bus
-    AddrB <= std_logic_vector(unsigned(AdderInA) + unsigned(AdderInB));
+    AdderResult <= std_logic_vector(unsigned(AdderInA) + unsigned(AdderInB));
+
+    -- Process to latch the address bus so that we can repurpose the adder for 
+    --  instructions, offsets and constant addressing
+    Address_Latch : process(clock)
+    begin
+
+        if (rising_edge(clock) and std_match(CycleCnt, "00")) then
+            AddrB <= AdderResult;
+        end if;
+    end process;
+
+    -- Put the adder result on the newXYZ line
+    newXYZ <= AdderResult;
 
 --
 -- Data Bus Control 
@@ -281,10 +290,8 @@ signal IR_from_control : opcode_word;
 signal StackPointer : std_logic_vector(15 downto 0);
 signal MemCnst : std_logic_vector(15 downto 0);
 signal writeData : std_logic;
-
-signal Fake_A : std_logic_vector(7 downto 0);
-
-    
+signal newXYZ : std_logic_vector(15 downto 0);
+  
 begin
 
     ALUUnit : entity ALU port map(
@@ -309,7 +316,7 @@ begin
                     writeX => writeX, 
                     writeY => writeY, 
                     writeZ => writeZ, 
-                    Addr => Address_Bus,
+                    Addr => newXYZ,
                     RegAOut => OperandA, 
                     RegBOut => OperandB, 
                     XYZ => XYZ
@@ -318,7 +325,7 @@ begin
     ControlUnit : entity Control port map(
                     clock => clock, 
                     reset => Reset, 
-                    SP_in => Address_Bus, 
+                    SP_in => newXYZ, 
                     Write_SP => writeSP,
                     IR_in => IR,  
                     IR_out => IR_from_control, 
@@ -334,19 +341,20 @@ begin
                     IR => IR_from_control, 
                     XYZ => XYZ, 
                     SP => StackPointer, 
-                    RegA => Fake_A, 
+                    RegA => OperandA, 
                     CycleCnt => cycle_count, 
                     MemCnst => MemCnst, 
                     clock => clock, 
                     DataDB => DataDB, 
-                    AddrB => Address_Bus, 
+                    AddrB => DataAB, 
                     DataRd => DataRd, 
                     DataWr => writeData, 
                     selXYZ => selXYZ, 
                     writeX => writeX, 
                     writeY => writeY, 
                     writeZ => writeZ, 
-                    writeSP => writeSP
+                    writeSP => writeSP,
+                    newXYZ => newXYZ
                 );
 
     DataWr <= writeData;
