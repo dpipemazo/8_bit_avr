@@ -77,7 +77,6 @@
 --     Jan 30 13    Dan Pipe-Mazo   BWAAHHHHHHH Inception. 
 --     Jan 31 13    Dan Pipe-Mazo   Comments + debugging 
 --     Jan 31 13    Sean Keenan     Comments + debugging
---     Feb 07 13    Sean Keenan     Updated Test bench and cycle_cnt
 --
 ----------------------------------------------------------------------------
     
@@ -102,7 +101,7 @@ entity  ALU  is
         clock     :  in  std_logic;                         -- system clock
         Result    :  buffer std_logic_vector(7 downto 0);      -- ALU result
         StatReg   :  buffer std_logic_vector(7 downto 0);   -- status register
-        cycle_cnt :  in std_logic_vector(1 downto 0)                       -- which clock cycle of a 
+        clk_cycle :  buffer std_logic                       -- which clock cycle of a 
                                                             --  2 clock instruction we're on
                                                             --  Only matters for ADIW, MUL and SBIW
     );
@@ -158,7 +157,7 @@ begin
 
     --
     -- INSTRUCTIONS: ADD, ADC, SUB, SUBC, ADIW, SBIW, SUBI, NEG, DEC, INC, COM, 
-    --               CP, CPC, CPI, SBCI
+    --               CP, CPC, CPI, SBCI, LDI
     --
 
     -- Wire up the alu adder unit. This unit is able to perform
@@ -178,14 +177,16 @@ begin
                      OperandA;
 
 
-    adder_b_input <= "00000000" when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and std_match(cycle_cnt, "01")) or
+    adder_b_input <= "00000000" when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') or
                                         std_match(IR, OpINC) or std_match(IR, OpDEC) or 
-                                        std_match(IR, OpNEG) or std_match(IR, OpCOM)) else
+                                        std_match(IR, OpNEG) or std_match(IR, OpCOM) or
+                                        std_match(IR, OpLDI)) else
                      internal_op_b;
 
     adder_sub_input <=  '0' when (std_match(IR, OpINC) or std_match(IR, OpNEG) or
                                   std_match(IR, OpCOM) or std_match(IR, OpADD) or
-                                  std_match(IR, OpADC) or std_match(IR, OpADIW)) else
+                                  std_match(IR, OpADC) or std_match(IR, OpADIW) or
+                                  std_match(IR, opLDI)) else
                         '1';--when (std_match(IR, OpSUBI) or std_match(IR, OpDEC) or
                             --     std_match(IR, OpCP) or std_match(IR, OpCPC) or
                             --      std_match(IR, OpCPI) or std_match(IR, OpSUB) or
@@ -196,7 +197,7 @@ begin
                                             std_match(IR, OpINC)) else
                          StatReg(0) when ( std_match(IR, OpADC) or std_match(IR, OpSBC) or
                                              std_match(IR, OpSBCI) or std_match(IR, OpCPC) or
-                                             ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and std_match(cycle_cnt, "01"))) else
+                                             ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1')) else
                          '0';   --when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0') or
                                 --              std_match(IR, OpSUBI) or std_match(IR, OpADD) or 
                                 --             std_match(IR, OpSUB) or std_match(IR, OpCOM), ;
@@ -269,8 +270,9 @@ begin
                                             std_match(IR, OpCP)   or
                                             std_match(IR, OpCPC)  or
                                             std_match(IR, OpCPI)  or
-                                            std_match(IR, OpSBCI)  or
-                                            std_match(IR, OpCOM)) else
+                                            std_match(IR, OpSBCI) or
+                                            std_match(IR, OpCOM) or 
+                                            std_match(IR, OpLDI)) else
                        shift_result when(   std_match(IR, OpROR)  or
                                             std_match(IR, OpASR)  or
                                             std_match(IR, OpLSR)) else
@@ -318,26 +320,60 @@ begin
     --
     internal_status_reg(1) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "001") ) else
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "001") ) else
-                                internal_status_reg(1) when(
-                                                std_match(IR, OpBCLR) or
-                                                std_match(IR, OpBLD) or
-                                                std_match(IR, OpBST) or
-                                                std_match(IR, OpBSET) or
-                                                std_match(IR, OpSWAP)) else
-                                not OR_REDUCE(Result);
+                                not OR_REDUCE(Result) when (    std_match(IR, OpADC ) or
+                                                                std_match(IR, OpADD ) or
+                                                                std_match(IR, OpADIW) or
+                                                                std_match(IR, OpAND ) or
+                                                                std_match(IR, OpANDI) or
+                                                                std_match(IR, OpASR ) or
+                                                                std_match(IR, OpCOM ) or
+                                                                std_match(IR, OpCP  ) or
+                                                                std_match(IR, OpCPC ) or
+                                                                std_match(IR, OpCPI ) or
+                                                                std_match(IR, OpDEC ) or
+                                                                std_match(IR, OpEOR ) or
+                                                                std_match(IR, OpINC ) or
+                                                                std_match(IR, OpLSR ) or
+                                                                std_match(IR, OpNEG ) or
+                                                                std_match(IR, OpOR  ) or
+                                                                std_match(IR, OpORI ) or
+                                                                std_match(IR, OpROR ) or
+                                                                std_match(IR, OpSBC ) or
+                                                                std_match(IR, OpSBCI) or
+                                                                std_match(IR, OpSBIW) or
+                                                                std_match(IR, OpSUB ) or
+                                                                std_match(IR, OpSUBI) ) else
+                                internal_status_reg(1);
 
     --
     -- NEGATIVE FLAG
     --
     internal_status_reg(2) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "010") ) else
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "010") ) else
-                                internal_status_reg(2) when(
-                                                std_match(IR, OpBCLR) or
-                                                std_match(IR, OpBLD) or
-                                                std_match(IR, OpBST) or
-                                                std_match(IR, OpBSET) or
-                                                std_match(IR, OpSWAP)) else
-                                Result(7);
+                                Result(7)             when (    std_match(IR, OpADC ) or
+                                                                std_match(IR, OpADD ) or
+                                                                std_match(IR, OpADIW) or
+                                                                std_match(IR, OpAND ) or
+                                                                std_match(IR, OpANDI) or
+                                                                std_match(IR, OpASR ) or
+                                                                std_match(IR, OpCOM ) or
+                                                                std_match(IR, OpCP  ) or
+                                                                std_match(IR, OpCPC ) or
+                                                                std_match(IR, OpCPI ) or
+                                                                std_match(IR, OpDEC ) or
+                                                                std_match(IR, OpEOR ) or
+                                                                std_match(IR, OpINC ) or
+                                                                std_match(IR, OpLSR ) or
+                                                                std_match(IR, OpNEG ) or
+                                                                std_match(IR, OpOR  ) or
+                                                                std_match(IR, OpORI ) or
+                                                                std_match(IR, OpROR ) or
+                                                                std_match(IR, OpSBC ) or
+                                                                std_match(IR, OpSBCI) or
+                                                                std_match(IR, OpSBIW) or
+                                                                std_match(IR, OpSUB ) or
+                                                                std_match(IR, OpSUBI) ) else
+                                internal_status_reg(2);
 
     --
     -- SIGNED OVERFLOW FLAG
@@ -424,6 +460,12 @@ begin
         if (rising_edge(clock)) then
             StatReg <= internal_status_reg;
 
+            if ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and (clk_cycle /= '1') ) then
+                clk_cycle <= '1';
+            else
+                clk_cycle <= '0';
+            end if;
+
         end if;
 
     end process clockResult;
@@ -443,7 +485,6 @@ use ieee.std_logic_1164.all;
 library work;
 use work.opcodes.all;
 use work.alu;
-use work.Control;
 
 entity  ALU_TEST  is
 
@@ -460,43 +501,12 @@ end  ALU_TEST;
 
 architecture arch of ALU_TEST is 
 
-    signal clock_cycle : std_logic_vector(1 downto 0);
+    signal clock_cycle : std_logic;
     signal result_buffer : std_logic_vector(7 downto 0);
     signal stat_reg_buffer : std_logic_vector( 7 downto 0);
 
-
-
-    -- Signals that are output that we trash
-    -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
-    -- signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
-    signal SP        : std_logic_vector(15 downto 0);
-    signal MemCnst   : std_logic_vector(15 downto 0);
-    signal XYZ       : std_logic_vector(15 downto 0);
-    signal IR_out    : std_logic_vector(15 downto 0);
-    signal Addr      : std_logic_vector(15 downto 0);  -- Address bus
-    signal RegInSel  : std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
-    signal WriteReg  : std_logic;                     -- Write signal for registers
-
-    -- Constants
-    constant reset      : std_logic := '1';          -- Don't reset in these tests
-    constant Write_SP   : std_logic := '0';          -- Don't want to write to SP in tests
-    constant Zero16Bits : std_logic_vector(15 downto 0) := (others => '0');
-
 begin
     
-    ConTest : entity Control port map(clock => clock,    -- Clock
-                                      reset => reset,    -- Reset is held high (not reset)
-                                      SP_in => Addr,     -- SP should be off of Addr Bus
-                                      Write_SP => Write_SP,
-                                      IR_in  => IR,
-                                      IR_out => IR_out,    -- Same instruction register 
-                                      ProgDB => Zero16Bits,-- Not testing "m" instructions 
-                                      SP => SP,            -- Trash SP
-                                      MemCnst => MemCnst,  -- Trash MemCnst
-                                      WriteReg => WriteReg, 
-                                      RegInSel => RegInSel,
-                                      CycleCnt => clock_cycle);
-
     ALUTst: entity ALU port map( IR, OperandA, OperandB, clock, result_buffer, stat_reg_buffer, clock_cycle);
 
     Result <= result_buffer;

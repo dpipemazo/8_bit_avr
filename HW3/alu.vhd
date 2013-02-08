@@ -319,26 +319,60 @@ begin
     --
     internal_status_reg(1) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "001") ) else
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "001") ) else
-                                internal_status_reg(1) when(
-                                                std_match(IR, OpBCLR) or
-                                                std_match(IR, OpBLD) or
-                                                std_match(IR, OpBST) or
-                                                std_match(IR, OpBSET) or
-                                                std_match(IR, OpSWAP)) else
-                                not OR_REDUCE(Result);
+                                not OR_REDUCE(Result) when (    std_match(IR, OpADC ) or
+                                                                std_match(IR, OpADD ) or
+                                                                std_match(IR, OpADIW) or
+                                                                std_match(IR, OpAND ) or
+                                                                std_match(IR, OpANDI) or
+                                                                std_match(IR, OpASR ) or
+                                                                std_match(IR, OpCOM ) or
+                                                                std_match(IR, OpCP  ) or
+                                                                std_match(IR, OpCPC ) or
+                                                                std_match(IR, OpCPI ) or
+                                                                std_match(IR, OpDEC ) or
+                                                                std_match(IR, OpEOR ) or
+                                                                std_match(IR, OpINC ) or
+                                                                std_match(IR, OpLSR ) or
+                                                                std_match(IR, OpNEG ) or
+                                                                std_match(IR, OpOR  ) or
+                                                                std_match(IR, OpORI ) or
+                                                                std_match(IR, OpROR ) or
+                                                                std_match(IR, OpSBC ) or
+                                                                std_match(IR, OpSBCI) or
+                                                                std_match(IR, OpSBIW) or
+                                                                std_match(IR, OpSUB ) or
+                                                                std_match(IR, OpSUBI) ) else
+                                internal_status_reg(1);
 
     --
     -- NEGATIVE FLAG
     --
     internal_status_reg(2) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "010") ) else
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "010") ) else
-                                internal_status_reg(2) when(
-                                                std_match(IR, OpBCLR) or
-                                                std_match(IR, OpBLD) or
-                                                std_match(IR, OpBST) or
-                                                std_match(IR, OpBSET) or
-                                                std_match(IR, OpSWAP)) else
-                                Result(7);
+                                Result(7)             when (    std_match(IR, OpADC ) or
+                                                                std_match(IR, OpADD ) or
+                                                                std_match(IR, OpADIW) or
+                                                                std_match(IR, OpAND ) or
+                                                                std_match(IR, OpANDI) or
+                                                                std_match(IR, OpASR ) or
+                                                                std_match(IR, OpCOM ) or
+                                                                std_match(IR, OpCP  ) or
+                                                                std_match(IR, OpCPC ) or
+                                                                std_match(IR, OpCPI ) or
+                                                                std_match(IR, OpDEC ) or
+                                                                std_match(IR, OpEOR ) or
+                                                                std_match(IR, OpINC ) or
+                                                                std_match(IR, OpLSR ) or
+                                                                std_match(IR, OpNEG ) or
+                                                                std_match(IR, OpOR  ) or
+                                                                std_match(IR, OpORI ) or
+                                                                std_match(IR, OpROR ) or
+                                                                std_match(IR, OpSBC ) or
+                                                                std_match(IR, OpSBCI) or
+                                                                std_match(IR, OpSBIW) or
+                                                                std_match(IR, OpSUB ) or
+                                                                std_match(IR, OpSUBI) ) else
+                                internal_status_reg(2);
 
     --
     -- SIGNED OVERFLOW FLAG
