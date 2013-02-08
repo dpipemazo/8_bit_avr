@@ -196,8 +196,8 @@ begin
                            std_match(IR_in, OpSTXD) or std_match(IR_in, OpSTYI) or
                            std_match(IR_in, OpSTYD) or std_match(IR_in, OpSTDY) or
                            std_match(IR_in, OpSTZI) or std_match(IR_in, OpSTZD) or
-                           std_match(IR_in, OpSTDZ) or std_match(IR_in, OpPOP)  or
-                           std_match(IR_in, OpPUSH) or std_match(IR_in, OpSTS) ) else
+                           std_match(IR_in, OpSTDZ) or std_match(IR_in, OpPUSH) or 
+                           std_match(IR_in, OpSTS) ) else
                 -- If not one of the above operations, write to the register
                 --  array.
                  '1';
