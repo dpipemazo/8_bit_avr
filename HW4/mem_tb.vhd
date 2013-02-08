@@ -2,6 +2,41 @@
 --
 --  Atmel AVR Memory Test Entity 
 --
+--  Iterates through all of the Load and Store commands, making sure that
+--  each command operates as indended. The only command that isn't looped
+--  through is LDI, which is used to setup registers before they are used,
+--  and in being used so frequently, is also tested throughly in the test
+--  bench. In addition, the MOV command is tested seperately, after all of 
+--  the load and store commands. 
+--
+--  The largest loop is one that loads 11 different starting addresses for
+--  all of the commands to start at, one of these cases are all zeroes, and
+--  another is all ones, the rest are all random starting addresses.
+--
+--  Inside this loop we initialize either the X, Y, or Z registers based on
+--  where we are in the array (the array is ordered by all X operands, then
+--  Y operands, then Z, then all others that don't operate on registers).
+--
+--  We then write a random value to register 16, and if needed calculate
+--  our new address line value.
+--  (for load commands we do this so that we have a random value we overwrite)
+--  (for store commands we do this so that we have a random value to read)
+--
+--  We then make sure the signals match what we expect based on the timing
+--  diagrams.
+--
+--  Then if we are performing a load type op we check to make sure that we
+--  wrote to the register. (if we didn't the old value will have been random
+--  and we won't match)
+--
+--  Finally we loop this 4 times, in order to make sure that the address
+--  is post or pre decrementing/incrementing properly based on the instruction
+--
+--  After this, we test MOV by storing a random value to register 16 and 17
+--  And then we'll move register 17 into register 16 and check that register 16
+--  has the value that was in register 17.
+--  We repeat this 5 times, just for good measure 
+--  (mostly to make sure the random values aren't the same...)
 --
 --  Revision History:
 --     07 Feb 13  Sean Keenan  Initial Revision
@@ -71,14 +106,14 @@ architecture TB_MEM_ARCH of MEM_tb is
 
 
   --
-  -- Simple Load and Store Opcodes that only inc/dec or keep X unchanged
+  -- All of the load store commands, including Push/Pop
   --
 
-  constant loadStoreSimpleSize : integer := 21;
+  constant loadStoreSize : integer := 21;
 
-  type LOAD_STR_SIMPLE_OP is array (0 to loadStoreSimpleSize) of std_logic_vector(15 downto 0);
+  type LOAD_STR_SIMPLE_OP is array (0 to loadStoreSize) of std_logic_vector(15 downto 0);
 
-  constant loadStoreSimple : LOAD_STR_SIMPLE_OP := (
+  constant loadStoreArray : LOAD_STR_SIMPLE_OP := (
       -- X Commands
       OpLDX,  -- Index: 0  - 
       OpSTX,  -- Index: 1  - 
@@ -190,7 +225,7 @@ begin
   -- Check all of the Simple Load and store commands
   --
 
-  -- Run all of the simple load and store commands with 8 random addresses, and 
+  -- Run all of the simple load and store commands with 9 random addresses, and 
   -- two addresses that are all 1's and all 0's
   for b in 0 to 10 loop
 
@@ -207,8 +242,8 @@ begin
       AddressToLoad := (others => '1');
     end if;
 
-    -- Loop over the commands in loadStoreSimpleSize
-    for a in 0 to loadStoreSimpleSize loop
+    -- Loop over the commands in loadStoreSize
+    for a in 0 to loadStoreSize loop
 
       -- If this is a command we load from X
       if a <= lastXCommand then
@@ -285,7 +320,7 @@ begin
         end if;
 
         -- Load a command that performs a Load/Store
-        temp_op  := loadStoreSimple(a);
+        temp_op  := loadStoreArray(a);
 
         -- Load/Store to Register 16
         temp_op(8 downto 4) := std_logic_vector(to_unsigned(16, 5));
