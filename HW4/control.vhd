@@ -101,7 +101,7 @@ begin
                            std_match(IR_in, OpSTYD) or std_match(IR_in, OpSTDY) or
                            std_match(IR_in, OpSTZI) or std_match(IR_in, OpSTZD) or
                            std_match(IR_in, OpSTDZ) or std_match(IR_in, OpPOP)  or
-                           std_match(IR_in, OpPUSH) or std_match(IR_in, OpSTS) ) else
+                           std_match(IR_in, OpPUSH) or std_match(IR_in, OpSTS)) else
                  '1';
 
     --
@@ -138,8 +138,7 @@ begin
                             std_match(IR_in, OpLDXD) or std_match(IR_in, OpLDYI) or
                             std_match(IR_in, OpLDYD) or std_match(IR_in, OpLDDY) or
                             std_match(IR_in, OpLDZI) or std_match(IR_in, OpLDZD) or
-                            std_match(IR_in, OpLDDZ) or std_match(IR_in, OpLDI)  or 
-                            std_match(IR_in, OpLDS) ) else
+                            std_match(IR_in, OpLDDZ) or std_match(IR_in, OpLDS) ) else
                 '0';
 
     IR_out <= IR_in;

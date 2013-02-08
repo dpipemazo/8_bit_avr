@@ -128,7 +128,7 @@ begin
                                         std_match(IR, OpLDDY) or 
                                         std_match(IR, OpLDDZ) or
                                         std_match(IR, OpSTDY) or
-                                        std_match(IR, OpSTZD)) else
+                                        std_match(IR, OpSTDZ)) else
                 (others => '0');
 
     -- Now put the sum of AdderInA and AdderInB on the address bus

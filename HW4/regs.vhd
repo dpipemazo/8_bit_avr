@@ -77,17 +77,20 @@ architecture regBehavior of REG is
 
     -- Declare a large std_logic_vector block for all of our registers
     -- (32 registers * 8 bits each = 256 bits -> 255 downto 0)
-    signal  registers       :  std_logic_vector(255 downto 0);
+    signal  registers        :  std_logic_vector(255 downto 0);
     
     -- Internal A/B select lines, 5 bits to select from 32 registers
-    signal  internalASelect :  std_logic_vector(4 downto 0);
-    signal  internalBSelect :  std_logic_vector(4 downto 0);
+    signal  internalASelect  :  std_logic_vector(4 downto 0);
+    signal  internalBSelect  :  std_logic_vector(4 downto 0);
 
     -- Internal Data Write line, muxed from RegB, ALU or Memory Data Bus
     signal  internalDataWrite : std_logic_vector(7 downto 0);
 
     -- Convenience boolean to demark when ADIW or SBIW
-    signal  isImmWord       :  boolean;
+    signal  isImmWord         :  boolean;
+
+    signal  internalRegBOut   :  std_logic_vector(7 downto 0);  -- Register bus B out
+
 
 begin
 
@@ -136,8 +139,8 @@ begin
 
     end process;
 
-    -- Internally mux the RegBOut, DataDB and ALUIn to the internal Data Line
-    internalDataWrite <= internalBSelect when (std_match(IR, OpMOV)) else
+    -- Internally mux the internalRegBOut, DataDB and ALUIn to the internal Data Line
+    internalDataWrite <= internalRegBOut when (std_match(IR, OpMOV)) else
                          DataDB when (RegInSel = '1') else
                          ALUIn; --when (RegInSel = '0')
 
@@ -177,8 +180,10 @@ begin
                          8 * to_integer(unsigned(internalASelect)));
    
     -- Assigns output B to the register as determined by internalBSelect
-    RegBOut <= registers(8 * to_integer(unsigned(internalBSelect)) + 7 downto
-                         8 * to_integer(unsigned(internalBSelect)));
+    internalRegBOut <= registers(8 * to_integer(unsigned(internalBSelect)) + 7 downto
+                                 8 * to_integer(unsigned(internalBSelect)));
+
+    RegBOut <= internalRegBOut;
 
     -- Select Register to output on XYZ address line based on selXYZ,
     -- We don't care about the case where selXYZ = "01", and output Z
