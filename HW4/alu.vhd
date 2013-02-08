@@ -456,7 +456,7 @@ begin
                                                 std_match(IR, OpSBCI) or
                                                 std_match(IR, OpSBIW) or
                                                 std_match(IR, OpSUB ) or
-                                                std_match(IR, OpSUBI) ) else;
+                                                std_match(IR, OpSUBI) ) else
 
                                 internal_status_reg(4);
 
@@ -528,6 +528,7 @@ use ieee.std_logic_1164.all;
 library work;
 use work.opcodes.all;
 use work.alu;
+use work.control;
 
 entity  ALU_TEST  is
 
