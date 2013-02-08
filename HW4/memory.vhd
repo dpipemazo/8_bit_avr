@@ -28,10 +28,10 @@ entity  Memory  is
         MemCnst     : in  std_logic_vector(15 downto 0); -- Constant to load from memory
         clock       : in  std_logic;
         -- Dealing with memory
-        DataDB      : inout std_logic_vector(7 downto 0);-- Memory Data Bus
+        DataDB      : out std_logic_vector(7 downto 0);-- Memory Data Bus
         AddrB       : out std_logic_vector(15 downto 0); -- Address Bus
         DataRd      : out std_logic;                     -- read to main memory, active low
-        DataWr      : out std_logic;                     -- write to main memory, active low
+        DataWr      : buffer std_logic;                     -- write to main memory, active low
         -- Dealing with register unit
         selXYZ      : out std_logic_vector(1 downto 0);  -- Select read from X/Y/Z
         writeX      : out std_logic;                     -- write to the X register
@@ -178,9 +178,9 @@ begin
                 std_match(IR, OpLDDZ) or
                 std_match(IR, OpPOP)) then
 
-                DataRd <= clock;
+                clockedRead <= '0';
             else
-                DataRd <= '1';
+                clockedRead <= '1';
             end if;
 
             if (std_match(IR, OpSTX) or
@@ -194,33 +194,38 @@ begin
                 std_match(IR, OpSTDZ) or
                 std_match(IR, OpPUSH)) then
 
-                DataWr <= clock;
+                clockedWrite <= '0';
             else
-                DataWr <= '1';
+                clockedWrite <= '1';
             end if;
 
         elsif (std_match(CycleCnt, "01")) then
             if (std_match(IR, OpLDS)) then
-                DataRd <= clock;
+                clockedRead <= '0';
             else
-                DataRd <= '1';
+                clockedRead <= '1';
             end if;
 
             if (std_match(IR, OpSTS)) then
-                DataWr <= clock;
+                clockedWrite <= '0';
             else
-                DataWr <= '1';
+                clockedWrite <= '1';
             end if;
 
         else
-            DataRd <= '1';
-            DataWr <= '1';
-
+            clockedRead <= '1';
+            clockedWrite <= '1';
         end if;
 
     end if;
 
     end process ReadWrite;
+
+--
+-- Now assign the values of clockedRead and clockedWrite to DataRd and DataWr
+--
+    DataRd <= clockedRead or clock;
+    DataWr <= clockedWrite or clock;
 
 end memoryBehavior;
 
@@ -275,9 +280,13 @@ signal XYZ : std_logic_vector(15 downto 0);
 signal IR_from_control : opcode_word;
 signal StackPointer : std_logic_vector(15 downto 0);
 signal MemCnst : std_logic_vector(15 downto 0);
+signal writeData : std_logic;
+
+signal Fake_A : std_logic_vector(7 downto 0);
 
     
 begin
+
     ALUUnit : entity ALU port map(
                     IR => IR_from_control, 
                     OperandA => OperandA, 
@@ -325,19 +334,21 @@ begin
                     IR => IR_from_control, 
                     XYZ => XYZ, 
                     SP => StackPointer, 
-                    RegA => OperandA, 
+                    RegA => Fake_A, 
                     CycleCnt => cycle_count, 
                     MemCnst => MemCnst, 
                     clock => clock, 
                     DataDB => DataDB, 
                     AddrB => Address_Bus, 
                     DataRd => DataRd, 
-                    DataWr => DataWr, 
+                    DataWr => writeData, 
                     selXYZ => selXYZ, 
                     writeX => writeX, 
                     writeY => writeY, 
                     writeZ => writeZ, 
                     writeSP => writeSP
                 );
+
+    DataWr <= writeData;
 
 end architecture;
