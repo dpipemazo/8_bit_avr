@@ -74,7 +74,7 @@ architecture TB_MEM_ARCH of MEM_tb is
   -- Simple Load and Store Opcodes that only inc/dec or keep X unchanged
   --
 
-  constant loadStoreSimpleSize : integer := 19;
+  constant loadStoreSimpleSize : integer := 21;
 
   type LOAD_STR_SIMPLE_OP is array (0 to loadStoreSimpleSize) of std_logic_vector(15 downto 0);
 
@@ -99,54 +99,19 @@ architecture TB_MEM_ARCH of MEM_tb is
       OpLDZD, -- Index: 14 - 
       OpSTZD, -- Index: 15 - 
       OpLDDZ, -- Index: 16 - 
-      OpSTDZ,  -- Index: 17 - 
+      OpSTDZ, -- Index: 17 - 
       -- LDS / STS commands
-      OpLDS,
-      OpSTS
+      OpLDS,  -- Index: 18 -
+      OpSTS,  -- Index: 19 -
+      -- Push / POP commands
+      OpPOP,  -- Index: 20 -
+      OpPUSH  -- Index: 21 -
     );
 
-  constant lastXCommand : integer := 5;
-  constant lastYCommand : integer := 11;
-  constant lastZCommand : integer := 17;
-
-  -- --
-  -- -- Load/Store Opcodes that add a constant to addressed location
-  -- --
-
-  -- constant loadConstSize : integer := 3;
-
-  -- type LOAD_CONST_OP is array (0 to loadConstSize) of std_logic_vector(15 downto 0);
-
-  -- constant loadConst : LOAD_CONST_OP := (
-  --   );
-
-  --
-  -- Commands that use memory (take three clocks)
-  --
-
-  constant memoryCmdsSize : integer := 1;
-
-  type MEM_CMD_OP is array (0 to memoryCmdsSize) of std_logic_vector(15 downto 0);
-
-  constant memoryCmds : MEM_CMD_OP := (
-      OpLDS,
-      OpSTS
-    );
-
-
-  --
-  -- Commands that store some value to registers
-  --
-
-  constant popPushSize : integer := 1;
-
-  type POP_PUSH_OP is array (0 to popPushSize) of std_logic_vector(15 downto 0);
-
-  constant popPush : POP_PUSH_OP := (
-      OpPOP,
-      OpPUSH
-    );
-
+  constant lastXCommand   : integer := 5;
+  constant lastYCommand   : integer := 11;
+  constant lastZCommand   : integer := 17;
+  constant lastMemCommand : integer := 19;
 
 begin
 
@@ -186,6 +151,9 @@ begin
   variable AddressToLoad : std_logic_vector(15 downto 0);
   variable initialAddressToLoad : std_logic_vector(15 downto 0);
 
+  -- Locally keep track of the stack pointer since we can't read it
+  variable localSP       : std_logic_vector(15 downto 0);
+
   variable DBValue       : std_logic_vector(7 downto 0);
 
 
@@ -207,7 +175,13 @@ begin
 
   reset <= '0';
 
+  -- We will locally keep track of the stack pointer since we can't read it
+  -- On a reset the stack pointer goes to all 1's so we set our local copy
+  localSP := (others => '1');
+
   wait for 20 ns;
+
+  reset <= '1';
 
   -- Ofset our start such that we start 1 ns after a rising clock edge
   wait for 11 ns;
@@ -247,6 +221,8 @@ begin
         registerToLoadInto := 30;
       else
         -- Not X/Y or Z
+        -- Means we don't care what we write to our registers XYZ
+        -- Either LDS/STS, or PUSH/POP
       end if;
 
       -- Load a command that performs a write
@@ -277,7 +253,6 @@ begin
 
       -- We want to run the Pre/Post increment a few times, so loop 4 times
       for b in 0 to 3 loop
-
 
         -- Generate a value to be put on the DB
         UNIFORM(seed1, seed2, rand);                           -- generate random number
@@ -317,7 +292,12 @@ begin
       
         -- Save the initial Address to load for the LDDZ, LDDY, STDY, STDZ, LDS, STS commands 
         initialAddressToLoad := AddressToLoad;
-      
+
+        -- If Push or Pop
+        if (a = 20 or a = 21) then
+          AddressToLoad := localSP;
+        end if;
+
         -- If we are loading with unsigned displacement then calculate what our new address
         -- should be with the displacement, and pass a random displacement into the op
         if (a = 10 or a = 11 or a = 16 or a = 17) then
@@ -341,6 +321,12 @@ begin
         -- We need to pre decrement if any of these values
         if (a = 4 or a = 5 or a = 8 or a = 9 or a = 14 or a = 15) then
           AddressToLoad := std_logic_vector(unsigned(AddressToLoad) - 1);
+        end if;
+
+        -- If a pop instruction, pre increment
+        if (a = 20) then
+          AddressToLoad := std_logic_vector(unsigned(AddressToLoad) + 1);
+          localSP := AddressToLoad;
         end if;
 
         -- assert(AddressToLoad = DataAB)
@@ -462,8 +448,15 @@ begin
           AddressToLoad := std_logic_vector(unsigned(AddressToLoad) + 1);
         end if;
 
+        -- If a push instruction, post decrement
+        if (a = 21) then
+          AddressToLoad := std_logic_vector(unsigned(AddressToLoad) - 1);
+          localSP := AddressToLoad;
+        end if;
+
         -- Reset Address to load (since we don't alter it) for 
         -- displacement instructions and for LDS/STS instructions
+        -- and Push/POP commands
         if (a = 10 or a = 11 or a = 16 or a = 17 or a = 18 or a = 19) then
           AddressToLoad := initialAddressToLoad;
         end if;
