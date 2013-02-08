@@ -267,6 +267,9 @@ begin
 
       wait for 20 ns;
 
+      -- Load a command that performs a write
+      temp_op  := OpLDI;
+      
       -- Use registerToLoadInto + 1 (-16 since it's an Immediate Opcode)
       temp_op(7 downto 4) := std_logic_vector(to_unsigned(registerToLoadInto - 16 + 1, 4));
         
