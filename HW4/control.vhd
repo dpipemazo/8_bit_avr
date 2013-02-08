@@ -70,14 +70,6 @@
 --          unit. This is so that the adder in the MAU can be repurposed for 
 --          incrementing/decrementing the stack pointer. 
 --
--------------------------
--- CONSTANT MEMORY ADDRESS VALUE STORAGE
--------------------------
---      The control unit must pick off a constant memory address value
---          from the program DB for instructions such as LDS and STS and store
---          it. The unit then stores this value in a register, and forwards 
---          the value of the register to the MAU.
---
 ---
 ----
 -----
@@ -118,8 +110,6 @@ entity Control is
                                                     -- delete this after HW4.
         ProgDB  : in std_logic_vector(15 downto 0); -- The program data bus
         SP      : out std_logic_vector(15 downto 0);-- stack pointer
-        MemCnst : out std_logic_vector(15 downto 0);-- memory constant from 
-                                                    -- LDS and STS instructions
         WriteReg: out std_logic;                    -- write signal for regs.
         RegInSel: out std_logic;                    -- Which input to use for 
                                                     -- the registers. 0 = ALU, 
@@ -227,24 +217,6 @@ begin
             end if;
         end if;
     end process updateSP;
-
-    --
-    -- Update the memory constant
-    --
-    updateMemCnst: process(clock)
-    begin
-        if ( rising_edge(clock) ) then
-            -- After two clock cycles on the same instruction, always clock
-            --  the value from the Program DB into the memory constant register. 
-            --  most of the time, this will just be a random instruction, 
-            --  but when we need it for STS or LDS, the correct value will
-            --  be there. By clocking it on all instructions, we cave a little 
-            --  bit of logic. A logic saved is a logic earned. 
-            if ( std_match(CycleCnt, "01") ) then
-                MemCnst <= ProgDB;
-            end if;
-        end if;
-    end process updateMemCnst;
 
     --
     -- Generate the select logic for the input to the registers

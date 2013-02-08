@@ -253,7 +253,6 @@ architecture RegTestBehavior of REG_TEST is
     -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
     -- signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
     signal SP        : std_logic_vector(15 downto 0);
-    signal MemCnst   : std_logic_vector(15 downto 0);
     signal XYZ       : std_logic_vector(15 downto 0);
     signal IR_out    : std_logic_vector(15 downto 0);
 
@@ -282,7 +281,6 @@ begin
                                       IR_out => IR_out,    -- Same instruction register 
                                       ProgDB => Zero16Bits,-- Not testing "m" instructions 
                                       SP => SP,            -- Trash SP
-                                      MemCnst => MemCnst,  -- Trash MemCnst
                                       WriteReg => WriteReg, 
                                       RegInSel => RegInSel,
                                       CycleCnt => CycleCnt);

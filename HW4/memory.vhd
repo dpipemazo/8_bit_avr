@@ -71,7 +71,7 @@ entity  Memory  is
         SP          : in  std_logic_vector(15 downto 0); -- Stack Pointer
         RegA        : in  std_logic_vector(7 downto 0);  -- Register A from regs
         CycleCnt    : in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
-        MemCnst     : in  std_logic_vector(15 downto 0); -- Constant to load from memory
+        ProgDB      : in  std_logic_vector(15 downto 0); -- Constant to load from memory
         clock       : in  std_logic;
         -- Dealing with memory
         DataDB      : out std_logic_vector(7 downto 0);-- Memory Data Bus
@@ -150,8 +150,6 @@ begin
     
     AdderInA <= SP      when(std_match(IR, OpPUSH) or 
                                 std_match(IR, OpPOP)) else
-                MemCnst when(std_match(IR, OpSTS) or 
-                                std_match(IR, OpLDS)) else
                 XYZ;
 
     AdderInB <= (others => '1') when(   std_match(IR, OpLDXD) or
@@ -185,8 +183,14 @@ begin
     Address_Latch : process(clock)
     begin
 
-        if (rising_edge(clock) and std_match(CycleCnt, "00")) then
-            AddrB <= AdderResult;
+        if (rising_edge(clock)) then
+            if (std_match(CycleCnt, "00") and not (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
+                    AddrB <= AdderResult;
+            end if;
+
+            if (std_match(CycleCnt, "01") and (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
+                    AddrB <= ProgDB;
+            end if;
         end if;
     end process;
 
@@ -333,7 +337,6 @@ signal writeSP: std_logic;
 signal XYZ : std_logic_vector(15 downto 0);
 signal IR_from_control : opcode_word;
 signal StackPointer : std_logic_vector(15 downto 0);
-signal MemCnst : std_logic_vector(15 downto 0);
 signal writeData : std_logic;
 signal newXYZ : std_logic_vector(15 downto 0);
 
@@ -378,7 +381,6 @@ begin
                     IR_out => IR_from_control, 
                     ProgDB => ProgDB, 
                     SP => StackPointer, 
-                    MemCnst => MemCnst, 
                     WriteReg => write_register, 
                     RegInSel => RegInSel, 
                     CycleCnt => cycle_count
@@ -390,7 +392,7 @@ begin
                     SP => StackPointer, 
                     RegA => OperandA, 
                     CycleCnt => cycle_count, 
-                    MemCnst => MemCnst, 
+                    ProgDB => ProgDB, 
                     clock => clock, 
                     DataDB => DataDB, 
                     AddrB => DataAB, 

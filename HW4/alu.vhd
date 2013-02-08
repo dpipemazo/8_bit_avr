@@ -480,6 +480,7 @@ use ieee.std_logic_1164.all;
 library work;
 use work.opcodes.all;
 use work.alu;
+use work.control;
 
 entity  ALU_TEST  is
 
@@ -506,7 +507,6 @@ architecture arch of ALU_TEST is
     -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
     -- signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
     signal SP        : std_logic_vector(15 downto 0);
-    signal MemCnst   : std_logic_vector(15 downto 0);
     signal XYZ       : std_logic_vector(15 downto 0);
     signal IR_out    : std_logic_vector(15 downto 0);
     signal Addr      : std_logic_vector(15 downto 0);  -- Address bus
@@ -528,7 +528,6 @@ begin
                                       IR_out => IR_out,    -- Same instruction register 
                                       ProgDB => Zero16Bits,-- Not testing "m" instructions 
                                       SP => SP,            -- Trash SP
-                                      MemCnst => MemCnst,  -- Trash MemCnst
                                       WriteReg => WriteReg, 
                                       RegInSel => RegInSel,
                                       CycleCnt => clock_cycle);
