@@ -223,3 +223,121 @@ begin
     end process ReadWrite;
 
 end memoryBehavior;
+
+--
+-- Now declare the testable memory unit
+--
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.numeric_std.all;
+
+library work;
+use work.opcodes.all;
+use work.alu;
+use work.regs;
+use work.control;
+use work.memory;
+
+
+entity  MEM_TEST  is
+
+    port (
+        IR      :  in     opcode_word;                      -- Instruction Register
+        ProgDB  :  in     std_logic_vector(15 downto 0);    -- second word of instruction
+        Reset   :  in     std_logic;                        -- system reset signal (active low)
+        clock   :  in     std_logic;                        -- system clock
+        DataAB  :  out    std_logic_vector(15 downto 0);    -- data address bus
+        DataDB  :  inout  std_logic_vector(7 downto 0);     -- data data bus
+        DataRd  :  out    std_logic;                        -- data read (active low)
+        DataWr  :  out    std_logic                         -- data write (active low)
+    );
+
+end  MEM_TEST;
+
+architecture MemTestBehavior of MEM_TEST is
+
+signal OperandA : std_logic_vector(7 downto 0);
+signal OperandB : std_logic_vector(7 downto 0);
+signal ALU_result : std_logic_vector(7 downto 0);
+signal StatusReg : std_logic_vector(7 downto 0);
+signal cycle_count : std_logic_vector(1 downto 0);
+signal write_register : std_logic;
+signal RegInSel : std_logic;
+signal selXYZ : std_logic_vector(1 downto 0);
+signal writeX : std_logic;
+signal writeY : std_logic;
+signal writeZ : std_logic;
+signal writeSP: std_logic;
+signal Address_Bus : std_logic_vector(15 downto 0);
+signal XYZ : std_logic_vector(15 downto 0);
+signal IR_from_control : opcode_word;
+signal StackPointer : std_logic_vector(15 downto 0);
+signal MemCnst : std_logic_vector(15 downto 0);
+
+    
+begin
+    ALUUnit : entity ALU port map(
+                    IR => IR_from_control, 
+                    OperandA => OperandA, 
+                    OperandB => OperandB, 
+                    clock => clock, 
+                    Result => ALU_result,
+                    StatReg => StatusReg,
+                    cycle_cnt => cycle_count
+                );
+
+    REGUnit : entity REG port map(
+                    IR => IR_from_control, 
+                    DataDB => DataDB, 
+                    ALUIn => ALU_result, 
+                    clock => clock, 
+                    CycleCnt => cycle_count, 
+                    WriteReg => write_register, 
+                    RegInSel => RegInSel,
+                    selXYZ => selXYZ,
+                    writeX => writeX, 
+                    writeY => writeY, 
+                    writeZ => writeZ, 
+                    Addr => Address_Bus,
+                    RegAOut => OperandA, 
+                    RegBOut => OperandB, 
+                    XYZ => XYZ
+                );
+
+    ControlUnit : entity Control port map(
+                    clock => clock, 
+                    reset => Reset, 
+                    SP_in => Address_Bus, 
+                    Write_SP => writeSP,
+                    IR_in => IR  
+                    IR_out => IR_from_control, 
+                    ProgDB => ProgDB, 
+                    SP => StackPointer, 
+                    MemCnst => MemCnst, 
+                    WriteReg => write_register, 
+                    RegInSel => RegInSel, 
+                    CycleCnt => cycle_count
+                );
+
+    MemUnit : entity memory port map(
+                    IR => IR_from_control, 
+                    XYZ => XYZ, 
+                    SP => StackPointer, 
+                    RegA => OperandA, 
+                    CycleCnt => cycle_count, 
+                    MemCnst => MemCnst, 
+                    clock => clock, 
+                    DataDB => DataDB, 
+                    AddrB => Address_Bus, 
+                    DataRd => DataRd, 
+                    DataWr => DataWr, 
+                    selXYZ => selXYZ, 
+                    writeX => writeX, 
+                    writeY => writeY, 
+                    writeZ => writeZ, 
+                    writeSP => writeSP
+                );
+                 
+end architecture;

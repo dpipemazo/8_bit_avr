@@ -25,7 +25,7 @@ entity Control is
                                                     -- delete this after HW4.
         IR_out  : out opcode_word;                  -- Instruction register.Will 
                                                     -- delete this after HW4.
-        ProgDB  : in opcode_word;                   -- The program data bus
+        ProgDB  : in std_logic_vector(15 downto 0); -- The program data bus
         SP      : out std_logic_vector(15 downto 0);-- stack pointer
         MemCnst : out std_logic_vector(15 downto 0);-- memory constant from 
                                                     -- LDS and STS instructions
