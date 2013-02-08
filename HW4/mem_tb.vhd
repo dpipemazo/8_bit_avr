@@ -172,7 +172,24 @@ begin
     );
 
   process
-    variable loopVar : integer;
+
+  -- Index used to determine what register we are looking at in our loops
+  variable j : integer range 0 to 31;
+
+  -- Variable that temporarily stores an op-code that is then transfered to the IR
+  variable temp_op : std_logic_vector(15 downto 0);
+
+  -- Variable that we use to temporarly store the address we want to for Register B
+  -- Which we then combine into temp_op, which is then transfered to IR
+  variable temp_b_reg : std_logic_vector(4 downto 0);
+
+  -- Variables used for Random Number generation
+  variable seed1, seed2: positive;               -- Seed values for random generator
+  variable randInt, oldRandInt, randInt2 : integer;
+  variable rand: real;                           -- Random real-number value in range 0 to 1.0
+
+  -- Indexes used for the constant arrays filled with Instructions
+  variable a, b : integer;
 
   variable AddressToLoad : std_logic_vector(15 downto 0);
 
@@ -182,31 +199,43 @@ begin
   variable Reg16Val      : std_logic_vector(7 downto 0);
   variable Reg17Val      : std_logic_vector(7 downto 0);
 
+  variable registerToLoadInto : integer;
+
   begin
 
-  DataDB <= (others <= 'Z');
-  ProgDB <= (others <= 'Z');
+  DataDB <= (others => 'Z');
+  ProgDB <= (others => 'Z');
+
+  --
+  -- First Reset signal
+  --
+
+  reset <= '0';
+
+  wait for 20 ns;
 
   -- Ofset our start such that we start 1 ns after a rising clock edge
   wait for 11 ns;
 
-  -- -- Check to make sure that we can write to all of our registers, read out of all of
-  -- -- our registers on both lines A and B and make sure that CP doesn't alter any of the
-  -- -- registers. We only test the Add and CP command over all of the possible registers
+  --
+  -- Check all of the Simple Load and store commands
+  --
 
+  -- Run all of the simple load and store commands with 8 random addresses, and 
+  -- two addresses that are all 1's and all 0's
   for b in 0 to 10 loop
 
 
     UNIFORM(seed1, seed2, rand);                           -- generate random number
     randInt2 := INTEGER(TRUNC(rand*65536.0));                -- rescale to 0..256, find integer part
-    AddressToLoad <= std_logic_vector(to_unsigned(randInt2, AddressToLoad'LENGTH));  -- convert to std_logic_vector
+    AddressToLoad := std_logic_vector(to_unsigned(randInt2, AddressToLoad'LENGTH));  -- convert to std_logic_vector
 
     -- Test the edge cases where the address to load is all zeros and all 1's
     -- This will test our Pre-decrement and post-increment commands more thoroughly
     if b = 0 then
-      AddressToLoad := (others <= '0');
+      AddressToLoad := (others => '0');
     elsif b = 1 then
-      AddressToLoad := (others <= '1');
+      AddressToLoad := (others => '1');
     end if;
 
     -- Loop over the commands in loadStoreSimpleSize
@@ -255,7 +284,7 @@ begin
         -- Generate a value to be put on the DB
         UNIFORM(seed1, seed2, rand);                           -- generate random number
         randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-        DBValue <= std_logic_vector(to_unsigned(randInt2, DBValue'LENGTH));  -- convert to std_logic_vector
+        DBValue := std_logic_vector(to_unsigned(randInt2, DBValue'LENGTH));  -- convert to std_logic_vector
 
         -- We will now load this value into register 16
         -- (for load commands we do this so that we have a random value we overwrite)
@@ -275,11 +304,11 @@ begin
         wait for 20 ns;
 
         -- If a load command we should regenerate DBValue
-        if (a % 2) = 0 then
+        if (a mod 2) = 0 then
           -- Generate a value to be put on the DB
           UNIFORM(seed1, seed2, rand);                           -- generate random number
           randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-          DBValue <= std_logic_vector(to_unsigned(randInt2, DBValue'LENGTH));  -- convert to std_logic_vector
+          DBValue := std_logic_vector(to_unsigned(randInt2, DBValue'LENGTH));  -- convert to std_logic_vector
         end if;
 
         -- Load a command that performs a Load/Store
@@ -294,7 +323,7 @@ begin
 
         -- We need to pre increment if a > 1 and 
         if (a = 2 or a = 3 or a = 6 or a = 7 or a = 10 or a = 11) then
-          AddressToLoad := AddressToLoad + ("0000" & "0000" & "0000" & "0001");
+          AddressToLoad :=std_logic_vector(unsigned(AddressToLoad) + 1);
         end if;
 
         assert(AddressToLoad = DataAB)
@@ -313,7 +342,7 @@ begin
         wait for 6 ns;
 
         -- If a store command then assert that DataDB = DBValue
-        if (a % 2) = 1 then
+        if (a mod 2) = 1 then
 
           assert(DataDB = DBValue)
           report "Data Bus not a valid value 5ns into second clock of Store command (LDI could also be broken)"
@@ -324,7 +353,7 @@ begin
         wait for 6 ns;
 
         -- Check that DataRd or DataWr are low based on command
-        if (a % 2) = 1 then
+        if (a mod 2) = 1 then
           assert(DataRd = '1')
           report "Data Read active on Write command!"
           severity ERROR;
@@ -345,7 +374,7 @@ begin
         wait for 4 ns;
 
         -- If a load command put DBValue on DataDB now
-        if (a % 2) = 0 then
+        if (a mod 2) = 0 then
 
           DataDB <= DBValue;
 
@@ -363,13 +392,13 @@ begin
 
         -- We are now 1 ns ahead of the clk again.
 
-        DataDB <= (others <= 'Z');
+        DataDB <= (others => 'Z');
 
         -- If a load command, then we should check we wrote to the register
         -- Unfortunately, we have to do this by running a Store command, and
         -- checking if the value appears on the bus. 
         -- (which is also potetially buggy)
-        if (a % 2) = 0 then
+        if (a mod 2) = 0 then
           -- Load a command that allows us to read, and shouldn't change X
           temp_op  := OpSTX;
 
@@ -394,7 +423,7 @@ begin
 
         -- We need to post decrement if any of these values
         if (a = 4 or a = 5 or a = 8 or a = 9 or a = 12 or a = 13) then
-          AddressToLoad := AddressToLoad - ("0000" & "0000" & "0000" & "0001");
+          AddressToLoad := std_logic_vector(unsigned(AddressToLoad) - 1);
         end if;
 
       end loop;
@@ -415,7 +444,7 @@ begin
 
     UNIFORM(seed1, seed2, rand);                           -- generate random number
     randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-    Reg17Val <= std_logic_vector(to_unsigned(randInt2, Reg17Val'LENGTH));  -- convert to std_logic_vector
+    Reg17Val := std_logic_vector(to_unsigned(randInt2, Reg17Val'LENGTH));  -- convert to std_logic_vector
 
     -- Load a command that performs a write
     temp_op  := OpLDI;
@@ -437,7 +466,7 @@ begin
     -- Generate a value to be put on the DB
     UNIFORM(seed1, seed2, rand);                           -- generate random number
     randInt2 := INTEGER(TRUNC(rand*256.0));                -- rescale to 0..256, find integer part
-    Reg16Val <= std_logic_vector(to_unsigned(randInt2, Reg16Val'LENGTH));  -- convert to std_logic_vector
+    Reg16Val := std_logic_vector(to_unsigned(randInt2, Reg16Val'LENGTH));  -- convert to std_logic_vector
 
     -- Load a command that performs a write
     temp_op  := OpLDI;
@@ -497,6 +526,9 @@ begin
 
   end loop;
 
+  -- Finished Simulation
+  END_SIM <= TRUE;
+  wait;
   end process;
 
 
