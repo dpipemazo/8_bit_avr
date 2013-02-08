@@ -8,9 +8,7 @@
 --      3. The stack pointer from the control unit
 --      4. The output "A" register from the register unit
 --      5. The cycle count from the control unit.
---      6. The memory constant for LDS and STS instructions from the control
---              unit.
---      7. The system clock
+--      6. The system clock
 --
 --  This unit outputs the following signals to the system which are used for 
 --     memory accesses:
@@ -35,13 +33,54 @@
 --  This unit has the following responsibilities:
 --
 ------------------------
--- 
+-- XYZ REGISTER OUTPUT
 ------------------------
+--      This unit must generate the select line to the mux which governs whether
+--          X, Y or Z shows up on the output bus from the registers. 
 --
+------------------------
+-- 16-BIT REGISTER WRITE SIGNALS
+------------------------
+--      This unit generates the write signals for the 16-bit registers X, Y, 
+--          Z and SP. It was decided to put this functionality in this unit 
+--          as opposed to the control unit since these registers are used 
+--          mainly for memory access purposes. 
 --
+------------------------
+-- ADDRESS BUS
+------------------------
+--      This unit is responsible for outputting the address bus to memory. 
+--          It must multiplex the bus between the XYZ and SP buses, as well
+--          as deal with constant offset or memory adress commands. This is
+--          mainly done through a single adder. The adder takes the appropriate
+--          bus, either XYZ or SP as input, and adds the appropriate offset 
+--          which the instruction requires. The output of this adder is then
+--          sent to the address bus for the final clock of every instruction. 
+--          In the event of an STS or LDS instruction, rather than outputting
+--          the result of the adder, the value of the ProgramDB at the rising
+--          edge of the final clock of the instruction is sent to the address
+--          bus. This will allow us to directly output the constant memory
+--          address to the address bus. 
 --
----
-----
+------------------------
+-- DATA BUS
+------------------------
+---     This unit is responsible for dealing with putting values sent over from
+--          the registers unit onto the data bus. It must tri-state the bus 
+--          in all cases when we are not outputting to it, and then put 
+--          the 'Register A' input from the registers unit onto the data bus
+--          when we do a store instruction or similar. 
+--
+------------------------
+-- READ/WRITE SIGNALS TO MAIN MEMORY
+------------------------
+----    This unit needs to drop the read signal low for the final half-clock of
+--          any load instruction, and drop the write signal low for the final
+--          half-clock of any store instruction. It does so by calculating
+--          whether it is the final clock of either respective instruction on
+--          a rising clock edge, latching a '0' if it is the final clock, and
+--          then OR-ing this latched value with the clock to produce a 
+--          half-clock low pulse on either DataRD or DataWR.   
 -----
 ------
 ------- REVISION HISTORY
@@ -184,10 +223,12 @@ begin
     begin
 
         if (rising_edge(clock)) then
+            -- Use the adder for most memory access instructions
             if (std_match(CycleCnt, "00") and not (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
                     AddrB <= AdderResult;
             end if;
 
+            -- Use the program data bus for STS and LDS
             if (std_match(CycleCnt, "01") and (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
                     AddrB <= ProgDB;
             end if;
@@ -226,6 +267,7 @@ begin
     if (rising_edge(clock)) then
 
         if (std_match(CycleCnt, "00")) then
+            -- If we have just finished the first clock of a load
             if (std_match(IR, OpLDX) or
                 std_match(IR, OpLDXI) or
                 std_match(IR, OpLDXD) or
@@ -237,11 +279,14 @@ begin
                 std_match(IR, OpLDDZ) or
                 std_match(IR, OpPOP)) then
 
+                -- We want to drop read for the final half-clock
                 clockedRead <= '0';
             else
+                -- Otherwise, keep read high
                 clockedRead <= '1';
             end if;
 
+            -- If we have just finished the first clock of a store
             if (std_match(IR, OpSTX) or
                 std_match(IR, OpSTXI) or
                 std_match(IR, OpSTXD) or
@@ -253,25 +298,34 @@ begin
                 std_match(IR, OpSTDZ) or
                 std_match(IR, OpPUSH)) then
 
+                -- we want to drop write for the final half-clock
                 clockedWrite <= '0';
             else
+                -- Otherwise, keep write high.
                 clockedWrite <= '1';
             end if;
 
         elsif (std_match(CycleCnt, "01")) then
+            -- If we have just finished the second clock of a LDS
             if (std_match(IR, OpLDS)) then
+                -- we want to drop read for the final half-clock
                 clockedRead <= '0';
             else
+                -- otherwise, keep it high
                 clockedRead <= '1';
             end if;
 
+            -- If we have just finished the second clock of an STS
             if (std_match(IR, OpSTS)) then
+                -- we want to drop write for the final half-clock
                 clockedWrite <= '0';
             else
+                -- Otherwise, keep it high
                 clockedWrite <= '1';
             end if;
 
         else
+            -- At all other times, keep both signals high
             clockedRead <= '1';
             clockedWrite <= '1';
         end if;
@@ -281,7 +335,9 @@ begin
     end process ReadWrite;
 
 --
--- Now assign the values of clockedRead and clockedWrite to DataRd and DataWr
+-- Now assign the values of clockedRead and clockedWrite to DataRd and DataWr, 
+--  OR-ing them with clock so that they only go low for the final half-clock
+--  of the cycle
 --
     DataRd <= clockedRead or clock;
     DataWr <= clockedWrite or clock;
@@ -343,6 +399,10 @@ signal newXYZ : std_logic_vector(15 downto 0);
 signal FakeX : std_logic_vector(15 downto 0);
   
 begin
+
+--
+-- DO A LOT OF WIRING
+--
 
     ALUUnit : entity ALU port map(
                     IR => IR_from_control, 
