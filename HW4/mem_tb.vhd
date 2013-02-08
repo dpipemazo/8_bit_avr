@@ -74,45 +74,51 @@ architecture TB_MEM_ARCH of MEM_tb is
   -- Simple Load and Store Opcodes that only inc/dec or keep X unchanged
   --
 
-  constant loadStoreSimpleSize : integer := 13;
+  constant loadStoreSimpleSize : integer := 19;
 
   type LOAD_STR_SIMPLE_OP is array (0 to loadStoreSimpleSize) of std_logic_vector(15 downto 0);
 
   constant loadStoreSimple : LOAD_STR_SIMPLE_OP := (
-      OpLDX,
-      OpSTX,
-      OpLDXI,
-      OpSTXI,
-      OpLDXD,
-      OpSTXD,
-      OpLDYI,
-      OpSTYI,
-      OpLDYD,
-      OpSTYD,
-      OpLDZI,
-      OpSTZI,
-      OpLDZD,
-      OpSTZD
+      -- X Commands
+      OpLDX,  -- Index: 0  - 
+      OpSTX,  -- Index: 1  - 
+      OpLDXI, -- Index: 2  - 
+      OpSTXI, -- Index: 3  - 
+      OpLDXD, -- Index: 4  - 
+      OpSTXD, -- Index: 5  - 
+      -- Y Commands
+      OpLDYI, -- Index: 6  - 
+      OpSTYI, -- Index: 7  - 
+      OpLDYD, -- Index: 8  - 
+      OpSTYD, -- Index: 9  - 
+      OpLDDY, -- Index: 10 - 
+      OpSTDY, -- Index: 11 - 
+      -- Z Commands
+      OpLDZI, -- Index: 12 - 
+      OpSTZI, -- Index: 13 - 
+      OpLDZD, -- Index: 14 - 
+      OpSTZD, -- Index: 15 - 
+      OpLDDZ, -- Index: 16 - 
+      OpSTDZ,  -- Index: 17 - 
+      -- LDS / STS commands
+      OpLDS,
+      OpSTS
     );
 
   constant lastXCommand : integer := 5;
-  constant lastYCommand : integer := 9;
-  constant lastZCommand : integer := 13;
+  constant lastYCommand : integer := 11;
+  constant lastZCommand : integer := 17;
 
-  --
-  -- Load/Store Opcodes that add a constant to addressed location
-  --
+  -- --
+  -- -- Load/Store Opcodes that add a constant to addressed location
+  -- --
 
-  constant loadConstSize : integer := 3;
+  -- constant loadConstSize : integer := 3;
 
-  type LOAD_CONST_OP is array (0 to loadConstSize) of std_logic_vector(15 downto 0);
+  -- type LOAD_CONST_OP is array (0 to loadConstSize) of std_logic_vector(15 downto 0);
 
-  constant loadConst : LOAD_CONST_OP := (
-      OpLDDY,
-      OpSTDY,
-      OpLDDZ,
-      OpSTDZ
-    );
+  -- constant loadConst : LOAD_CONST_OP := (
+  --   );
 
   --
   -- Commands that use memory (take three clocks)
@@ -132,25 +138,11 @@ architecture TB_MEM_ARCH of MEM_tb is
   -- Commands that store some value to registers
   --
 
-  constant simpleRegSize : integer := 1;
-
-  type SIMPLE_REG_OP is array (0 to simpleRegSize) of std_logic_vector(15 downto 0);
-
-  constant simpleReg : SIMPLE_REG_OP := (
-      OpMOV,
-      OpLDI
-    );
-
-
-  --
-  -- Commands that store some value to registers
-  --
-
   constant popPushSize : integer := 1;
 
   type POP_PUSH_OP is array (0 to popPushSize) of std_logic_vector(15 downto 0);
 
-  constant popPush : SIMPLE_REG_OP := (
+  constant popPush : POP_PUSH_OP := (
       OpPOP,
       OpPUSH
     );
@@ -192,12 +184,15 @@ begin
   variable a, b : integer;
 
   variable AddressToLoad : std_logic_vector(15 downto 0);
+  variable initialAddressToLoad : std_logic_vector(15 downto 0);
 
   variable DBValue       : std_logic_vector(7 downto 0);
 
 
   variable Reg16Val      : std_logic_vector(7 downto 0);
   variable Reg17Val      : std_logic_vector(7 downto 0);
+
+  variable displacement  : std_logic_vector(5 downto 0);
 
   variable registerToLoadInto : integer;
 
@@ -269,7 +264,7 @@ begin
 
       -- Load a command that performs a write
       temp_op  := OpLDI;
-      
+
       -- Use registerToLoadInto + 1 (-16 since it's an Immediate Opcode)
       temp_op(7 downto 4) := std_logic_vector(to_unsigned(registerToLoadInto - 16 + 1, 4));
         
@@ -320,18 +315,37 @@ begin
         -- Load/Store to Register 16
         temp_op(8 downto 4) := std_logic_vector(to_unsigned(16, 5));
 
+        -- If we are loading with unsigned displacement then calculate what our new address
+        -- should be with the displacement, and pass a random displacement into the op
+        if (a = 10 or a = 11 or a = 16 or a = 17) then
+          -- Generate a value to be put on the DB
+          UNIFORM(seed1, seed2, rand);                           -- generate random number
+          randInt2 := INTEGER(TRUNC(rand*64.0));                 -- rescale to 0..64, find integer part
+          displacement := std_logic_vector(to_unsigned(randInt2, displacement'LENGTH));  -- convert to std_logic_vector
+
+          temp_op(2 downto 0) := displacement(2 downto 0);
+          temp_op(11 downto 10) := displacement(4 downto 3);
+          temp_op(13) := displacement(5);
+
+          -- Save the initial Address to load for the LDDZ, LDDY, STDY, STDZ commands 
+          initialAddressToLoad := AddressToLoad;
+
+          AddressToLoad := std_logic_vector(unsigned(AddressToLoad) + unsigned(displacement));
+
+        end if; 
+
         IR <= temp_op;
 
         wait for 18 ns;
 
-        -- We need to pre increment if a > 1 and 
-        if (a = 2 or a = 3 or a = 6 or a = 7 or a = 10 or a = 11) then
-          AddressToLoad :=std_logic_vector(unsigned(AddressToLoad) + 1);
+        -- We need to pre decrement if any of these values
+        if (a = 4 or a = 5 or a = 8 or a = 9 or a = 14 or a = 15) then
+          AddressToLoad := std_logic_vector(unsigned(AddressToLoad) - 1);
         end if;
 
-        assert(AddressToLoad = DataAB)
-        report "Address Bus not set Properly after 1st clock"
-        severity ERROR;
+        -- assert(AddressToLoad = DataAB)
+        -- report "Address Bus not set Properly after 1st clock"
+        -- severity ERROR;
 
         assert(DataRd = '1')
         report "Data Read not supposed to be active yet!"
@@ -424,9 +438,14 @@ begin
 
         end if;
 
-        -- We need to post decrement if any of these values
-        if (a = 4 or a = 5 or a = 8 or a = 9 or a = 12 or a = 13) then
-          AddressToLoad := std_logic_vector(unsigned(AddressToLoad) - 1);
+        -- We need to post increment if a > 1 and 
+        if (a = 2 or a = 3 or a = 6 or a = 7 or a = 12 or a = 13) then
+          AddressToLoad :=std_logic_vector(unsigned(AddressToLoad) + 1);
+        end if;
+
+        -- Reset Address to load (since we don't alter it) for displacement instructions
+        if (a = 10 or a = 11 or a = 16 or a = 17) then
+          AddressToLoad := initialAddressToLoad;
         end if;
 
       end loop;
