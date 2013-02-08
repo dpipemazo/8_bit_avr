@@ -128,7 +128,7 @@ architecture TB_MEM_ARCH of MEM_tb is
   -- Load/Store Opcodes that add a constant to addressed location
   --
 
-  constant loadConstSize : integer := 13;
+  constant loadConstSize : integer := 3;
 
   type LOAD_CONST_OP is array (0 to loadConstSize) of std_logic_vector(15 downto 0);
 
@@ -143,7 +143,7 @@ architecture TB_MEM_ARCH of MEM_tb is
   -- Commands that use memory
   --
 
-  constant memoryCmdsSize : integer := 13;
+  constant memoryCmdsSize : integer := 1;
 
   type MEM_CMD_OP is array (0 to memoryCmdsSize) of std_logic_vector(15 downto 0);
 
