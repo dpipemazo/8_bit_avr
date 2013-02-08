@@ -270,8 +270,9 @@ begin
                                             std_match(IR, OpCP)   or
                                             std_match(IR, OpCPC)  or
                                             std_match(IR, OpCPI)  or
-                                            std_match(IR, OpSBCI)  or
-                                            std_match(IR, OpCOM)) else
+                                            std_match(IR, OpSBCI) or
+                                            std_match(IR, OpCOM)  or 
+                                            std_match(IR, OpLDI)) else
                        shift_result when(   std_match(IR, OpROR)  or
                                             std_match(IR, OpASR)  or
                                             std_match(IR, OpLSR)) else
