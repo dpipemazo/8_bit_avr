@@ -83,7 +83,7 @@ architecture TB_MEM_ARCH of MEM_tb is
   signal DataAB       : std_logic_vector(15 downto 0);
 
   -- Data data bus
-  signal DataDB       : std_logic_vector(15 downto 0);
+  signal DataDB       : std_logic_vector(7 downto 0);
 
   -- Data read signal
   signal DataRd       : std_logic;
@@ -120,10 +120,6 @@ architecture TB_MEM_ARCH of MEM_tb is
       OpSTZD
     );
 
--- --Independant test on OpMOV
---   OpMOV
---   OpLDI
-
   --
   -- Load/Store Opcodes that add a constant to addressed location
   --
@@ -140,7 +136,7 @@ architecture TB_MEM_ARCH of MEM_tb is
     );
 
   --
-  -- Commands that use memory
+  -- Commands that use memory (take three clocks)
   --
 
   constant memoryCmdsSize : integer := 1;
@@ -152,11 +148,41 @@ architecture TB_MEM_ARCH of MEM_tb is
       OpSTS
     );
 
+
+  --
+  -- Commands that store some value to registers
+  --
+
+  constant simpleRegSize : integer := 1;
+
+  type SIMPLE_REG_OP is array (0 to simpleRegSize) of std_logic_vector(15 downto 0);
+
+  constant simpleReg : SIMPLE_REG_OP := (
+      OpMOV,
+      OpLDI
+    );
+
+
+  --
+  -- Commands that store some value to registers
+  --
+
+  constant popPushSize : integer := 1;
+
+  type POP_PUSH_OP is array (0 to popPushSize) of std_logic_vector(15 downto 0);
+
+  constant popPush : SIMPLE_REG_OP := (
+      OpPOP,
+      OpPUSH
+    );
+
+
 begin
 
   -- Unit Under Test port map
   UUT : MEM_TEST
     port map(
+      IR            =>  IR,
       ProgDB        =>  ProgDB,
       Reset         =>  Reset,
       clock         =>  clk,
@@ -168,32 +194,45 @@ begin
 
   process
 
-  -- -- Index used to determine what register we are looking at in our loops
-  -- variable j : integer range 0 to 31;
+  -- Index used to determine what register we are looking at in our loops
+  variable j : integer range 0 to 31;
 
-  -- -- Variable that temporarily stores an op-code that is then transfered to the IR
-  -- variable temp_op : std_logic_vector(15 downto 0);
+  -- Variable that temporarily stores an op-code that is then transfered to the IR
+  variable temp_op : std_logic_vector(15 downto 0);
 
-  -- -- Variable that we use to temporarly store the address we want to for Register B
-  -- -- Which we then combine into temp_op, which is then transfered to IR
-  -- variable temp_b_reg : std_logic_vector(4 downto 0);
+  -- Variable that we use to temporarly store the address we want to for Register B
+  -- Which we then combine into temp_op, which is then transfered to IR
+  variable temp_b_reg : std_logic_vector(4 downto 0);
 
-  -- -- Variables used for Random Number generation
-  -- variable seed1, seed2: positive;               -- Seed values for random generator
-  -- variable randInt, oldRandInt, randInt2 : integer;
-  -- variable rand: real;                           -- Random real-number value in range 0 to 1.0
+  -- Variables used for Random Number generation
+  variable seed1, seed2: positive;               -- Seed values for random generator
+  variable randInt, oldRandInt, randInt2 : integer;
+  variable rand: real;                           -- Random real-number value in range 0 to 1.0
 
-  -- -- Indexes used for the constant arrays filled with Instructions
-  -- variable a, b : integer;
+  -- Indexes used for the constant arrays filled with Instructions
+  variable a, b : integer;
 
-  -- begin
+  begin
 
-  -- -- Ofset our start such that we start 1 ns after a rising clock edge
-  -- wait for 11 ns;
+  -- Ofset our start such that we start 1 ns after a rising clock edge
+  wait for 11 ns;
 
   -- -- Check to make sure that we can write to all of our registers, read out of all of
   -- -- our registers on both lines A and B and make sure that CP doesn't alter any of the
   -- -- registers. We only test the Add and CP command over all of the possible registers
+
+  for a in 0 to loadStoreSimpleSize loop
+
+    -- Load a command that performs a write
+    temp_op  := writeOp(a);
+    
+    -- Write to Register 0
+    temp_op(8 downto 4) := std_logic_vector(to_unsigned(0, 5));
+
+    
+
+
+  end loop;
 
   -- for a in 0 to dontWriteOpSize loop
   --   for b in 0 to writeOpSize loop
