@@ -157,7 +157,7 @@ begin
 
     --
     -- INSTRUCTIONS: ADD, ADC, SUB, SUBC, ADIW, SBIW, SUBI, NEG, DEC, INC, COM, 
-    --               CP, CPC, CPI, SBCI
+    --               CP, CPC, CPI, SBCI, LDI
     --
 
     -- Wire up the alu adder unit. This unit is able to perform
@@ -179,12 +179,14 @@ begin
 
     adder_b_input <= "00000000" when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') or
                                         std_match(IR, OpINC) or std_match(IR, OpDEC) or 
-                                        std_match(IR, OpNEG) or std_match(IR, OpCOM)) else
+                                        std_match(IR, OpNEG) or std_match(IR, OpCOM) or
+                                        std_match(IR, OpLDI)) else
                      internal_op_b;
 
     adder_sub_input <=  '0' when (std_match(IR, OpINC) or std_match(IR, OpNEG) or
                                   std_match(IR, OpCOM) or std_match(IR, OpADD) or
-                                  std_match(IR, OpADC) or std_match(IR, OpADIW)) else
+                                  std_match(IR, OpADC) or std_match(IR, OpADIW) or
+                                  std_match(IR, opLDI)) else
                         '1';--when (std_match(IR, OpSUBI) or std_match(IR, OpDEC) or
                             --     std_match(IR, OpCP) or std_match(IR, OpCPC) or
                             --      std_match(IR, OpCPI) or std_match(IR, OpSUB) or
