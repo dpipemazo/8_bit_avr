@@ -495,7 +495,7 @@ end  ALU_TEST;
 
 architecture arch of ALU_TEST is 
 
-    signal clock_cycle : std_logic;
+    signal clock_cycle : std_logic_vector(1 downto 0);
     signal result_buffer : std_logic_vector(7 downto 0);
     signal stat_reg_buffer : std_logic_vector( 7 downto 0);
 
