@@ -101,7 +101,7 @@ entity  ALU  is
         clock     :  in  std_logic;                         -- system clock
         Result    :  buffer std_logic_vector(7 downto 0);      -- ALU result
         StatReg   :  buffer std_logic_vector(7 downto 0);   -- status register
-        clk_cycle :  buffer std_logic                       -- which clock cycle of a 
+        cycle_cnt :  in std_logic_vector(1 downto 0)                       -- which clock cycle of a 
                                                             --  2 clock instruction we're on
                                                             --  Only matters for ADIW, MUL and SBIW
     );
@@ -177,7 +177,7 @@ begin
                      OperandA;
 
 
-    adder_b_input <= "00000000" when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1') or
+    adder_b_input <= "00000000" when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and std_match(cycle_cnt, "01")) or
                                         std_match(IR, OpINC) or std_match(IR, OpDEC) or 
                                         std_match(IR, OpNEG) or std_match(IR, OpCOM) or
                                         std_match(IR, OpLDI)) else
@@ -197,7 +197,7 @@ begin
                                             std_match(IR, OpINC)) else
                          StatReg(0) when ( std_match(IR, OpADC) or std_match(IR, OpSBC) or
                                              std_match(IR, OpSBCI) or std_match(IR, OpCPC) or
-                                             ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '1')) else
+                                             ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and std_match(cycle_cnt, "01"))) else
                          '0';   --when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and clk_cycle = '0') or
                                 --              std_match(IR, OpSUBI) or std_match(IR, OpADD) or 
                                 --             std_match(IR, OpSUB) or std_match(IR, OpCOM), ;
@@ -458,12 +458,6 @@ begin
         -- DFF the result and status registers on clock edges
         if (rising_edge(clock)) then
             StatReg <= internal_status_reg;
-
-            if ((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and (clk_cycle /= '1') ) then
-                clk_cycle <= '1';
-            else
-                clk_cycle <= '0';
-            end if;
 
         end if;
 
