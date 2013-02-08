@@ -82,7 +82,7 @@ begin
     counter: process(clock)
     begin
         if ( rising_edge(clock) ) then
-            if (std_match(CycleCnt, num_cycles)) then
+            if (CycleCnt = "UU" or std_match(CycleCnt, num_cycles)) then
                 CycleCnt <= "00";
             else
                 CycleCnt <= CycleCnt + 1;
