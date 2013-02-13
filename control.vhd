@@ -104,9 +104,7 @@ entity Control is
         SP_in   : in std_logic_vector(15 downto 0); -- New value of SP computed 
                                                     -- by MMU.  
         Write_SP: in std_logic;                     -- Write new value of SP 
-        IR_in   : in opcode_word;                   -- Instruction register.Will 
-                                                    -- delete this after HW4.
-        IR_out  : out opcode_word;                  -- Instruction register.Will 
+        IR      : buffer opcode_word;               -- Instruction register.Will 
                                                     -- delete this after HW4.
         ProgDB  : in std_logic_vector(15 downto 0); -- The program data bus
         SP      : out std_logic_vector(15 downto 0);-- stack pointer
@@ -136,32 +134,46 @@ begin
     -- Logic for figuring out how many cycles to take. Fill in this table
     --  as mroe instrctions are implemented. 
     --
+                        -- 4 clock instructions
+    num_cycles     <=   "11" when(  std_match(IR, OpCALL) or
+                                    std_match(IR, OpRET) or
+                                    std_match(IR, OpRETI) ) else
                         -- 3 clock instructions
-    num_cycles     <=   "10" when(  std_match(IR_in, OpLDS) or 
-                                    std_match(IR_in, OpSTS) ) else
+                        "10" when(  std_match(IR, OpLDS) or 
+                                    std_match(IR, OpSTS) or
+                                    std_match(IR, OpJMP) or 
+                                    std_match(IR, OpRCALL) or
+                                    std_match(IR, OpICALL) or 
+                                    std_match(IR, OpCPSE) or
+                                    std_match(IR, OpSBRC) or
+                                    std_match(IR, OpSBRS) ) else
                         -- 2 clock instructions
-                        "01" when(  std_match(IR_in, OpLDX ) or
-                                    std_match(IR_in, OpLDXI) or
-                                    std_match(IR_in, OpLDXD) or
-                                    std_match(IR_in, OpLDYI) or
-                                    std_match(IR_in, OpLDYD) or
-                                    std_match(IR_in, OpLDDY) or
-                                    std_match(IR_in, OpLDZI) or
-                                    std_match(IR_in, OpLDZD) or
-                                    std_match(IR_in, OpLDDZ) or
-                                    std_match(IR_in, OpSTX ) or
-                                    std_match(IR_in, OpSTXI) or
-                                    std_match(IR_in, OpSTXD) or
-                                    std_match(IR_in, OpSTYI) or
-                                    std_match(IR_in, OpSTYD) or
-                                    std_match(IR_in, OpSTDY) or
-                                    std_match(IR_in, OpSTZI) or
-                                    std_match(IR_in, OpSTZD) or
-                                    std_match(IR_in, OpSTDZ) or
-                                    std_match(IR_in, OpPOP ) or
-                                    std_match(IR_in, OpPUSH) or
-                                    std_match(IR_in, OpADIW) or
-                                    std_match(IR_in, OpSBIW) ) else
+                        "01" when(  std_match(IR, OpLDX ) or
+                                    std_match(IR, OpLDXI) or
+                                    std_match(IR, OpLDXD) or
+                                    std_match(IR, OpLDYI) or
+                                    std_match(IR, OpLDYD) or
+                                    std_match(IR, OpLDDY) or
+                                    std_match(IR, OpLDZI) or
+                                    std_match(IR, OpLDZD) or
+                                    std_match(IR, OpLDDZ) or
+                                    std_match(IR, OpSTX ) or
+                                    std_match(IR, OpSTXI) or
+                                    std_match(IR, OpSTXD) or
+                                    std_match(IR, OpSTYI) or
+                                    std_match(IR, OpSTYD) or
+                                    std_match(IR, OpSTDY) or
+                                    std_match(IR, OpSTZI) or
+                                    std_match(IR, OpSTZD) or
+                                    std_match(IR, OpSTDZ) or
+                                    std_match(IR, OpPOP ) or
+                                    std_match(IR, OpPUSH) or
+                                    std_match(IR, OpADIW) or
+                                    std_match(IR, OpSBIW) or
+                                    std_match(IR, OpRJMP) or
+                                    std_match(IR, OpIJMP) or
+                                    std_match(IR, OpBRBC) or
+                                    std_match(IR, OpBRBS) ) else
                         -- 1 clock instructions
                         "00";
 
@@ -184,20 +196,34 @@ begin
     end process counter;
 
     --
+    -- Implement the latching and storing of the instruction register
+    --
+    IRLatch : process(clock)
+    begin
+        if (rising_edge(clock)) then
+            if (CycleCnt = "UU" or std_match(CycleCnt, num_cycles)) then
+                    -- If we reached the end of a cycle, latch new IR
+                    IR <= ProgDB;
+            end if;
+        end if;
+    end process IRLatch;
+
+
+    --
     -- Implement the write logic
     --
 
                 -- Operations not to write to the register array which do not 
                 --  require writing the output to the register array
-    WriteReg <=  '0' when (std_match(IR_in, OpBCLR) or std_match(IR_in, OpBSET) or
-                           std_match(IR_in, OpBST)  or std_match(IR_in, OpCP)   or
-                           std_match(IR_in, OpCPC)  or std_match(IR_in, OpCPI)  or
-                           std_match(IR_in, OpSTX)  or std_match(IR_in, OpSTXI) or
-                           std_match(IR_in, OpSTXD) or std_match(IR_in, OpSTYI) or
-                           std_match(IR_in, OpSTYD) or std_match(IR_in, OpSTDY) or
-                           std_match(IR_in, OpSTZI) or std_match(IR_in, OpSTZD) or
-                           std_match(IR_in, OpSTDZ) or std_match(IR_in, OpPUSH) or 
-                           std_match(IR_in, OpSTS) ) else
+    WriteReg <=  '0' when (std_match(IR, OpBCLR) or std_match(IR, OpBSET) or
+                           std_match(IR, OpBST)  or std_match(IR, OpCP)   or
+                           std_match(IR, OpCPC)  or std_match(IR, OpCPI)  or
+                           std_match(IR, OpSTX)  or std_match(IR, OpSTXI) or
+                           std_match(IR, OpSTXD) or std_match(IR, OpSTYI) or
+                           std_match(IR, OpSTYD) or std_match(IR, OpSTDY) or
+                           std_match(IR, OpSTZI) or std_match(IR, OpSTZD) or
+                           std_match(IR, OpSTDZ) or std_match(IR, OpPUSH) or 
+                           std_match(IR, OpSTS) ) else
                 -- If not one of the above operations, write to the register
                 --  array.
                  '1';
@@ -224,18 +250,18 @@ begin
     --
                 -- Use the data bus as input to the register arrays on the 
                 --  instructions below. 
-    RegInSel <= '1' when(   std_match(IR_in, OpLDX ) or std_match(IR_in, OpLDXI) or
-                            std_match(IR_in, OpLDXD) or std_match(IR_in, OpLDYI) or
-                            std_match(IR_in, OpLDYD) or std_match(IR_in, OpLDDY) or
-                            std_match(IR_in, OpLDZI) or std_match(IR_in, OpLDZD) or
-                            std_match(IR_in, OpLDDZ) or std_match(IR_in, OpLDS) or
-                            std_match(IR_in, OpPOP)) else
+    RegInSel <= '1' when(   std_match(IR, OpLDX ) or std_match(IR, OpLDXI) or
+                            std_match(IR, OpLDXD) or std_match(IR, OpLDYI) or
+                            std_match(IR, OpLDYD) or std_match(IR, OpLDDY) or
+                            std_match(IR, OpLDZI) or std_match(IR, OpLDZD) or
+                            std_match(IR, OpLDDZ) or std_match(IR, OpLDS) or
+                            std_match(IR, OpPOP)) else
                 -- If not an instruction above, use the ALU output as input
                 --  to the register arrays. 
                 '0';
 
     -- Simply feed IR through for now. Next week, implement a register. 
-    IR_out <= IR_in;
+    IR_out <= IR;
 
 end architecture;
 
