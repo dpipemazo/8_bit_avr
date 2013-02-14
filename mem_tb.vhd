@@ -199,6 +199,8 @@ begin
 
   variable registerToLoadInto : integer;
 
+  variable loopEachCommand : integer;
+
   begin
 
   DataDB <= (others => 'Z');
@@ -286,8 +288,16 @@ begin
 
       wait for 20 ns;
 
+
       -- We want to run the Pre/Post increment a few times, so loop 4 times
-      for b in 0 to 3 loop
+      loopEachCommand := 3;
+
+      if a > lastMemCommand then
+        UNIFORM(seed1, seed2, rand);                  -- generate random number
+        loopEachCommand := INTEGER(TRUNC(rand*8.0));       -- rescale to 0..8, find integer part
+      end if;
+
+      for b in 20 to loopEachCommand loop
 
         -- Generate a value to be put on the DB
         UNIFORM(seed1, seed2, rand);                           -- generate random number
