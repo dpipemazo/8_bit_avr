@@ -106,12 +106,14 @@ entity Control is
         Write_SP: in std_logic;                     -- Write new value of SP 
         IR      : buffer opcode_word;               -- Instruction register.Will 
                                                     -- delete this after HW4.
+        GetNextIR : in std_logic;
         ProgDB  : in std_logic_vector(15 downto 0); -- The program data bus
         SP      : out std_logic_vector(15 downto 0);-- stack pointer
         WriteReg: out std_logic;                    -- write signal for regs.
         RegInSel: out std_logic;                    -- Which input to use for 
                                                     -- the registers. 0 = ALU, 
                                                     -- 1 = Data Data Bus
+        lastCycle : out std_logic;
         CycleCnt: buffer std_logic_vector(1 downto 0) -- Which cycle of an 
                                                     -- instruction we are on. 
     );
@@ -178,36 +180,30 @@ begin
                         "00";
 
     --
-    -- Implement the clock cycle counter
+    -- GIVE SEAN LHIS LAST CYCLE
+    --
+    lastCycle <=    '1' when (( CycleCnt = "UU") or 
+                                std_match(CycleCnt, num_cycles)) else
+                    '0'
+
+    --
+    -- Implement the clock cycle counter and update IR
     --
     counter: process(clock)
     begin
         if ( rising_edge(clock) ) then
             -- Need the check for UU to handle simulation startup issues. 
             --      shouldn't make a difference in imeplementation.
-            if (CycleCnt = "UU" or std_match(CycleCnt, num_cycles)) then
+            if (GetNextIR)) then
                 -- If we reached the end of a cycle, reset the counter
                 CycleCnt <= "00";
+                IR <= ProgDB;
             else
                 -- Else, increment the counter
                 CycleCnt <= std_logic_vector(unsigned(CycleCnt) + 1);
             end if;
         end if;
     end process counter;
-
-    --
-    -- Implement the latching and storing of the instruction register
-    --
-    IRLatch : process(clock)
-    begin
-        if (rising_edge(clock)) then
-            if (CycleCnt = "UU" or std_match(CycleCnt, num_cycles)) then
-                    -- If we reached the end of a cycle, latch new IR
-                    IR <= ProgDB;
-            end if;
-        end if;
-    end process IRLatch;
-
 
     --
     -- Implement the write logic
@@ -259,9 +255,6 @@ begin
                 -- If not an instruction above, use the ALU output as input
                 --  to the register arrays. 
                 '0';
-
-    -- Simply feed IR through for now. Next week, implement a register. 
-    IR_out <= IR;
 
 end architecture;
 

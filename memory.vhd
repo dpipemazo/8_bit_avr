@@ -112,6 +112,7 @@ entity  Memory  is
         CycleCnt    : in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
         ProgDB      : in  std_logic_vector(15 downto 0); -- Constant to load from memory
         clock       : in  std_logic;
+        PC          : in std_logic_vector(15 downto 0); -- program counter
         -- Dealing with memory
         DataDB      : out std_logic_vector(7 downto 0);-- Memory Data Bus
         AddrB       : out std_logic_vector(15 downto 0); -- Address Bus
@@ -123,7 +124,7 @@ entity  Memory  is
         writeY      : out std_logic;                     -- write to the Y register
         writeZ      : out std_logic;                     -- write to the Z register
         writeSP     : out std_logic;                     -- write to the SP register
-        newXYZ      : out std_logic_vector(15 downto 0)  -- Updated value of XYZ after
+        AdderOut    : out std_logic_vector(15 downto 0)  -- Updated value of X/Y/Z/SP/PC after
                                                          -- pre/post increment
     );
 
@@ -137,6 +138,7 @@ signal AdderInB : std_logic_vector(15 downto 0);
 signal AdderResult : std_logic_vector(15 downto 0);
 signal clockedRead : std_logic;
 signal clockedWrite : std_logic;
+signal latchedArrd : std_logic_vector(15 downto 0);
 
 begin
 
@@ -150,6 +152,9 @@ begin
                                     std_match(IR, OpLDDZ) or 
                                     std_match(IR, OpSTDY) or 
                                     std_match(IR, OpSTDZ) ) else
+
+                "00" when (         std_match(IR, OpIJMP) or
+                                    std_match(IR, OpICALL)) else
 
                 IR(3 downto 2);
 
@@ -178,17 +183,41 @@ begin
                 '0';
 
     -- When to write the SP register
-    writeSP <= '1' when(std_match(CycleCnt, "01") and (
+    writeSP <= '1' when(   (std_match(CycleCnt, "01") and (
                             std_match(IR, OpPUSH) or 
-                            std_match(IR, OpPOP)) ) else
+                            std_match(IR, OpPOP) )) or
+
+                          ((std_match(CycleCnt, "00") or
+                            std_match(CycleCnt, "10")) and (
+                            std_match(IR, OpRCALL) or
+                            std_match(IR, OpICALL) or 
+                            std_match(IR, OpRET) or
+                            std_match(IR, OpRETI))) ) or
+
+                          ((std_match(CycleCnt, "01") or
+                            std_match(CycleCnt, "10")) and (
+                            std_match(IR, OpCALL))) else
                 '0';
 
 --
 -- Address Bus Control
 --
     
-    AdderInA <= SP      when(std_match(IR, OpPUSH) or 
-                                std_match(IR, OpPOP)) else
+    AdderInA <= SP      when(   std_match(IR, OpPUSH) or 
+                                std_match(IR, OpPOP) or 
+                                std_match(IR, OpCALL) or
+                                std_match(IR, OpRET) or
+                                std_match(IR, OpRETI) or
+                              ((std_match(CycleCnt, "00") or
+                                std_match(CycleCnt, "10")) and (
+                                std_match(IR, OpRCALL) or
+                                std_match(IR, OpICALL)))) else
+                PC      when(   std_match(IR, OpBRBC) or
+                                std_match(IR, OpBRBS) or
+                               (std_match(CycleCnt, "01") and (
+                                std_match(IR, OpRJMP) or
+                                std_match(IR, OpRCALL) or
+                                ))) else
                 XYZ;
 
     AdderInB <= (others => '1') when(   std_match(IR, OpLDXD) or
@@ -197,9 +226,21 @@ begin
                                         std_match(IR, OpSTXD) or
                                         std_match(IR, OpSTYD) or
                                         std_match(IR, OpSTZD) or
+                                        std_match(IR, OpCALL) or
+                                        std_match(IR, OpICALL) or
+
                                        (std_match(CycleCnt, "01") and
-                                        std_match(IR, OpPUSH))) else
+                                        std_match(IR, OpPUSH)) or
+
+                                      ((std_match(CycleCnt, "00") or
+                                        std_match(CycleCnt, "10")) and (
+                                        std_match(IR, OpRJMP) or
+                                        std_match(IR, OpRCALL)))) else
+
                 "0000000000000001" when(std_match(IR, OpPOP) or 
+                                        std_match(IR, OpRET) or
+                                        std_match(IR, OpRETI) or
+
                                        (std_match(CycleCnt, "01") and(
                                         std_match(IR, OpLDXI) or
                                         std_match(IR, OpLDYI) or
@@ -207,11 +248,21 @@ begin
                                         std_match(IR, OpSTXI) or
                                         std_match(IR, OpSTYI) or
                                         std_match(IR, OpSTZI)))) else
+
                 "0000000000" & IR(13) & IR(11 downto 10) & IR(2 downto 0) when(
                                         std_match(IR, OpLDDY) or 
                                         std_match(IR, OpLDDZ) or
                                         std_match(IR, OpSTDY) or
                                         std_match(IR, OpSTDZ)) else
+
+                "0000" & IR(11 downto 0) when(
+                                       (std_match(CycleCnt, "01") and
+                                        std_match(IR, OpRJMP) or
+                                        std_match(IR, OpRCALL))) else
+
+                "000000000" & IR(9 downto 3) when(
+                                        std_match(IR, OpBRBC) or
+                                        std_match(IR, OpBRBS)) else
                 (others => '0');
 
     -- Now put the sum of AdderInA and AdderInB on the address bus
@@ -225,115 +276,107 @@ begin
         if (rising_edge(clock)) then
             -- Use the adder for most memory access instructions
             if (std_match(CycleCnt, "00") and not (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
-                    AddrB <= AdderResult;
+                    latchedAddr <= AdderResult;
             end if;
 
             -- Use the program data bus for STS and LDS
             if (std_match(CycleCnt, "01") and (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
-                    AddrB <= ProgDB;
+                    latchedAddr <= ProgDB;
             end if;
         end if;
     end process;
 
-    -- Put the adder result on the newXYZ line
-    newXYZ <= AdderResult;
+    -- Asynchronously mux the latched address line and SP
+    AddrB <=    SP     when (   std_match(IR, OpCALL) or
+                                std_match(IR, OpRCALL) or
+                                std_match(IR, OpICALL) or
+                                std_match(IR, OpRET) or 
+                                std_match(IR, OpRETI) ) else
+                latchedAddr;
+
+
+
+    -- Put the adder result on the AdderOut line
+    AdderOut <= AdderResult;
 
 --
 -- Data Bus Control 
 --
 
     -- Tri-state the bus when we are not writing to it.    
-    DataDB  <=  RegA when( (std_match(CycleCnt, "01") and(
-                            std_match(IR, OpSTX)  or
-                            std_match(IR, OpSTXI) or
-                            std_match(IR, OpSTXD) or
-                            std_match(IR, OpSTYI) or
-                            std_match(IR, OpSTYD) or
-                            std_match(IR, OpSTZI) or
-                            std_match(IR, OpSTZD) or
-                            std_match(IR, OpSTDY) or
-                            std_match(IR, OpSTDZ) or 
-                            std_match(IR, OpPUSH))) or 
-                           (std_match(CycleCnt, "10") and
-                            std_match(IR, OpSTS)) ) else
+    DataDB  <=  RegA when( (    std_match(CycleCnt, "01") and(
+                                std_match(IR, OpSTX)  or
+                                std_match(IR, OpSTXI) or
+                                std_match(IR, OpSTXD) or
+                                std_match(IR, OpSTYI) or
+                                std_match(IR, OpSTYD) or
+                                std_match(IR, OpSTZI) or
+                                std_match(IR, OpSTZD) or
+                                std_match(IR, OpSTDY) or
+                                std_match(IR, OpSTDZ) or 
+                                std_match(IR, OpPUSH))) or 
+                               (std_match(CycleCnt, "10") and
+                                std_match(IR, OpSTS) ) ) else
+                ProgDB(15 downto 8) when( 
+                               (std_match(CycleCnt, "00") and (
+                                std_match(IR, OpRCALL) or 
+                                std_match(IR, OpICALL))) or 
+                               (std_match(CycleCnt, "01") and 
+                                std_match(IR, OpCALL))) else
+                ProgDB(7 downto 0) when(
+                                std_match(CycleCnt, "10") and (
+                                std_match(IR, OpRCALL) or
+                                std_match(IR, OpICALL) or
+                                std_match(IR, OpCALL))) else
                 (others => 'Z');
 
 --
 -- Memory Read/Write Control
 --
-    ReadWrite : process(clock)
-    begin
 
-    if (rising_edge(clock)) then
+    clockedRead <= '0' when(  (std_match(CycleCnt, "01") and (
+                                std_match(IR, OpLDX) or
+                                std_match(IR, OpLDXI) or
+                                std_match(IR, OpLDXD) or
+                                std_match(IR, OpLDYI) or
+                                std_match(IR, OpLDYD) or
+                                std_match(IR, OpLDZI) or
+                                std_match(IR, OpLDZD) or
+                                std_match(IR, OpLDDY) or
+                                std_match(IR, OpLDDZ) or
+                                std_match(IR, OpPOP) or
+                                std_match(IR, OpRET) or
+                                std_match(IR, OpRETI))) or
+                               
+                               (std_match(CycleCnt, "10") and (
+                                std_match(IR, OpLDS) or
+                                std_match(IR, OpRET) or
+                                std_match(IR, OpRETI))) ) else
+                    '1';
 
-        if (std_match(CycleCnt, "00")) then
-            -- If we have just finished the first clock of a load
-            if (std_match(IR, OpLDX) or
-                std_match(IR, OpLDXI) or
-                std_match(IR, OpLDXD) or
-                std_match(IR, OpLDYI) or
-                std_match(IR, OpLDYD) or
-                std_match(IR, OpLDZI) or
-                std_match(IR, OpLDZD) or
-                std_match(IR, OpLDDY) or
-                std_match(IR, OpLDDZ) or
-                std_match(IR, OpPOP)) then
-
-                -- We want to drop read for the final half-clock
-                clockedRead <= '0';
-            else
-                -- Otherwise, keep read high
-                clockedRead <= '1';
-            end if;
-
-            -- If we have just finished the first clock of a store
-            if (std_match(IR, OpSTX) or
-                std_match(IR, OpSTXI) or
-                std_match(IR, OpSTXD) or
-                std_match(IR, OpSTYI) or
-                std_match(IR, OpSTYD) or
-                std_match(IR, OpSTZI) or
-                std_match(IR, OpSTZD) or
-                std_match(IR, OpSTDY) or
-                std_match(IR, OpSTDZ) or
-                std_match(IR, OpPUSH)) then
-
-                -- we want to drop write for the final half-clock
-                clockedWrite <= '0';
-            else
-                -- Otherwise, keep write high.
-                clockedWrite <= '1';
-            end if;
-
-        elsif (std_match(CycleCnt, "01")) then
-            -- If we have just finished the second clock of a LDS
-            if (std_match(IR, OpLDS)) then
-                -- we want to drop read for the final half-clock
-                clockedRead <= '0';
-            else
-                -- otherwise, keep it high
-                clockedRead <= '1';
-            end if;
-
-            -- If we have just finished the second clock of an STS
-            if (std_match(IR, OpSTS)) then
-                -- we want to drop write for the final half-clock
-                clockedWrite <= '0';
-            else
-                -- Otherwise, keep it high
-                clockedWrite <= '1';
-            end if;
-
-        else
-            -- At all other times, keep both signals high
-            clockedRead <= '1';
-            clockedWrite <= '1';
-        end if;
-
-    end if;
-
-    end process ReadWrite;
-
+    clockedWrite <= '0' when(  (std_match(CycleCnt, "00") and (
+                                std_match(IR, OpRCALL) or
+                                std_match(IR, OpICALL))) or
+                               
+                               (std_match(CycleCnt, "01") and (
+                                std_match(IR, OpSTX) or
+                                std_match(IR, OpSTXI) or
+                                std_match(IR, OpSTXD) or
+                                std_match(IR, OpSTYI) or
+                                std_match(IR, OpSTYD) or
+                                std_match(IR, OpSTZI) or
+                                std_match(IR, OpSTZD) or
+                                std_match(IR, OpSTDY) or
+                                std_match(IR, OpSTDZ) or
+                                std_match(IR, OpPUSH) or 
+                                std_match(IR, OpCALL))) or
+                               
+                               (std_match(CycleCnt, "10") and (
+                                std_match(IR, OpSTS) or
+                                std_match(IR, OpCALL) or
+                                std_match(IR, OpRCALL) or
+                                std_match(IR, OpICALL))) else
+                    '1';
 --
 -- Now assign the values of clockedRead and clockedWrite to DataRd and DataWr, 
 --  OR-ing them with clock so that they only go low for the final half-clock
