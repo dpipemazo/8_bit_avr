@@ -210,7 +210,7 @@ begin
     --
 
     shift_result(6 downto 0) <= OperandA(7 downto 1);
-    shift_result(7) <=  OperandA(0) when (std_match(IR, OpROR)) else
+    shift_result(7) <=  StatReg(0) when (std_match(IR, OpROR)) else
                         OperandA(7) when (std_match(IR, OpASR)) else
                         '0';
     shift_carry <= OperandA(0);
