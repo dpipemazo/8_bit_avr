@@ -885,24 +885,19 @@ begin
                 --
                 if ( not ( op = OP_BCLR or op = OP_BLD or 
                            op = OP_BSET or op = OP_BST or 
-                           op = OP_SWAP or op = OP_CPC) ) then
+                           op = OP_SWAP) ) then
 
-                    if ( OR_REDUCE(expected) = '0' ) then
-                        check_bit := '1';
-                    else
-                        check_bit := '0';
+                    if (op /= OP_CPC) then
+                        prev_zero = '1'
                     end if;
 
-                    assert(StatReg(1) = check_bit) report "Zero flag incorrect";
-
-                elsif (op = OP_CPC) then
                     if ( OR_REDUCE(expected) = '0' and prev_zero = '1') then
                         check_bit := '1';
                     else
                         check_bit := '0';
                     end if;
 
-                    assert(StatReg(1) = check_bit) report "CPC Zero flag incorrect";
+                    assert(StatReg(1) = check_bit) report "Zero flag incorrect";
 
                 end if;
 
