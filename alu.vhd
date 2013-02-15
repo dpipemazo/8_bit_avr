@@ -336,7 +336,6 @@ begin
                                                                 std_match(IR, OpASR ) or
                                                                 std_match(IR, OpCOM ) or
                                                                 std_match(IR, OpCP  ) or
-                                                                std_match(IR, OpCPC ) or
                                                                 std_match(IR, OpCPI ) or
                                                                 std_match(IR, OpDEC ) or
                                                                 std_match(IR, OpEOR ) or
@@ -351,6 +350,8 @@ begin
                                                                 std_match(IR, OpSBIW) or
                                                                 std_match(IR, OpSUB ) or
                                                                 std_match(IR, OpSUBI) ) else
+                                not OR_REDUCE(Result) and StatReg(1) when ( 
+                                                                std_match(IR, OpCPC) ) else
 
                                 internal_status_reg(1);
 
