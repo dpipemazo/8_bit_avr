@@ -647,7 +647,7 @@ begin
 
                     -- calculate the expected result
                     expected(6 downto 0) := rand_inptA(7 downto 1);
-                    expected(7) := rand_inptA(0);
+                    expected(7) := StatReg(0);
 
                     -- wait for the answer
                     wait for 14 ns;
