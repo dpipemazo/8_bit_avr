@@ -92,6 +92,7 @@ signal FakeX : std_logic_vector(15 downto 0);
 signal PC : std_logic_vector(15 downto 0); -- program counter
 signal GetNextIR : std_logic;
 signal lastCycle : std_logic;
+signal result_zero : std_logic;
 
 begin
 
@@ -106,7 +107,8 @@ begin
                     clock => clock, 
                     Result => ALU_result,
                     StatReg => StatusReg,
-                    cycle_cnt => cycle_count
+                    cycle_cnt => cycle_count,
+                    result_zero => result_zero
                 );
 
     REGUnit : entity REG port map(
@@ -172,7 +174,7 @@ begin
                     DataDB    => DataDB,
                     Registers => ALU_result,
                     Status    => StatusReg,
-                    ZeroLine  => 
+                    ZeroLine  => result_zero,
                     ProgAB    => ProgAB,
                     GetNextIR => GetNextIR,
                     PC        => PC
