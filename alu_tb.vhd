@@ -26,6 +26,7 @@
 --     31 Jan 13    Dan Pipe-Mazo   Initial Revision
 --     31 Jan 13    Dan Pipe-Mazo   Improved commenting
 --     31 Jan 13    Sean Keenan     Header Block
+--     15 Feb 13    Dan Pipe-Mazo   Fixed for errors, now fully functional.
 --
 ----------------------------------------------------------------------------
 
@@ -67,7 +68,6 @@ architecture TB_ARCHITECTURE of alu_tb is
     signal clock    : std_logic;
     signal Result   : std_logic_vector(7 downto 0);
     signal StatReg  : std_logic_vector(7 downto 0);
-    signal prev_zero : std_logic;
 
     --Signal used to stop clock signal generators. should always be FALSE
     signal  END_SIM  :  BOOLEAN := FALSE;
@@ -163,6 +163,7 @@ begin
         variable temp_op : std_logic_vector(15 downto 0);
         variable check_bit : std_logic;
         variable stat_lp : integer;
+        variable prev_zero : std_logic;
 
     begin
 
@@ -268,7 +269,8 @@ begin
                     IR <= temp_op;
 
                     -- Now calculate the expected result
-                    expected := std_logic_vector(unsigned(rand_inptA) + unsigned("00"&rand_inptB(5 downto 0)));
+                    expected := std_logic_vector(unsigned(rand_inptA) + 
+						 unsigned("00"&rand_inptB(5 downto 0)));
 
                     -- now wait for the first answer
                     wait for 14 ns;
@@ -292,7 +294,11 @@ begin
                     end if;
 
                     -- Now wait for the second answer
-                    wait for 14 ns;
+                    wait for 10 ns;
+
+                    prev_zero := StatReg(1);
+
+                    wait for 4 ns;
 
                     -- check the answer
                     assert(result = expected) report "Wrong answer random input OpADIW test clock 2";
@@ -395,7 +401,8 @@ begin
                     wait for 14 ns;
 
                     -- check the answer
-                    assert(result(to_integer(unsigned(rand_inptB(2 downto 0)))) = check_bit) report "Wrond answer random input OpBLD test";
+                    assert(result(to_integer(unsigned(rand_inptB(2 downto 0)))) = check_bit) 
+			report "Wrong answer random input OpBLD test";
 
                 --
                 -- INSTRUCTION: BSET
@@ -483,13 +490,12 @@ begin
                     -- calculate the expected result
                     expected := std_logic_vector(unsigned(rand_inptA) - unsigned(rand_inptB));
 
+                    prev_zero := StatReg(1);
+
                     -- compensate for the carry flag
                     if (StatReg(0) = '1') then
                         expected := std_logic_vector(unsigned(expected) - 1);
                     end if;
-
-                    -- Grab the old value of the zerp flag
-                    prev_zero := StatReg(1);
 
                     -- check the answer
                     assert( result = expected ) report "Wrong answer random input CPC test";
@@ -722,7 +728,8 @@ begin
                     IR <= temp_op;
 
                     -- calculate the expected result
-                    expected := std_logic_vector(unsigned(rand_inptA) - unsigned("00"&rand_inptB(5 downto 0)));
+                    expected := std_logic_vector(unsigned(rand_inptA) - 
+						 unsigned("00"&rand_inptB(5 downto 0)));
 
                     -- wait for the answer
                     wait for 14 ns;
@@ -748,7 +755,11 @@ begin
                     end if;
 
                     -- now wait for the answer
-                    wait for 14 ns;
+                    wait for 10 ns;
+
+                    prev_zero := StatReg(1);
+
+                    wait for 4 ns;
 
                     assert( result = expected ) report "Wrong answer random input OpSBIW test clock 2";
 
@@ -824,13 +835,16 @@ begin
 
                 if ( op = OP_BST ) then
                     -- check the answer
-                    assert(StatReg(6) = rand_inptA(to_integer(unsigned(rand_inptB(2 downto 0)))) ) report "Wrong answer random input OpBST test";
+                    assert(StatReg(6) = rand_inptA(to_integer(unsigned(rand_inptB(2 downto 0)))) ) 
+			report "Wrong answer random input OpBST test";
 
                 elsif ( op = OP_BSET ) then
-                     assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '1') report "Wrong answer random input OpBSET test";
+                     assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '1') 
+			report "Wrong answer random input OpBSET test";
 
                 elsif ( op = OP_BCLR ) then
-                    assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '0') report "Wrong answer random input OpBCLR test";
+                    assert(StatReg(to_integer(unsigned(rand_inptA(2 downto 0)))) = '0') 
+			report "Wrong answer random input OpBCLR test";
 
                 end if;
 
@@ -846,14 +860,16 @@ begin
                 if ( op = OP_ADC  or op = OP_ADD ) then
                     
                     -- compute the carry flag
-                    check_bit := ((rand_inptA(7)) and rand_inptB(7)) or (rand_inptB(7) and not expected(7)) or (not expected(7) and rand_inptA(7));
+                    check_bit := ((rand_inptA(7)) and rand_inptB(7)) or (rand_inptB(7) and not expected(7)) 
+							or (not expected(7) and rand_inptA(7));
                     assert(StatReg(0) = check_bit ) report "Carry Flag incorrect on add operation";
 
                 elsif(  op = OP_CP   or op = OP_CPC or op = OP_CPI  or
                         op = OP_SUB  or op = OP_SUBI or
                         op = OP_SBC  or op = OP_SBCI) then
 
-                    check_bit := (not rand_inptA(7) and rand_inptB(7)) or (rand_inptB(7) and expected(7)) or (expected(7) and not rand_inptA(7));
+                    check_bit := (not rand_inptA(7) and rand_inptB(7)) or (rand_inptB(7) and expected(7)) 
+							or (expected(7) and not rand_inptA(7));
                     assert(StatReg(0) = check_bit ) report "Carry Flag incorrect on subtract operation";
 
                 elsif ( op = OP_ADIW ) then
@@ -885,10 +901,10 @@ begin
                 --
                 if ( not ( op = OP_BCLR or op = OP_BLD or 
                            op = OP_BSET or op = OP_BST or 
-                           op = OP_SWAP) ) then
+                           op = OP_SWAP ) ) then
 
-                    if (op /= OP_CPC) then
-                        prev_zero = '1'
+                    if ( op /= OP_CPC and op /= OP_ADIW and op /= OP_SBIW ) then
+                        prev_zero := '1';
                     end if;
 
                     if ( OR_REDUCE(expected) = '0' and prev_zero = '1') then
@@ -918,28 +934,36 @@ begin
 
                 if ( op = OP_ADC  or op = OP_ADD or op = OP_ADIW ) then
 
-                    check_bit := (rand_inptA(7) and rand_inptB(7) and not expected(7)) or (not rand_inptA(7) and not rand_inptB(7) and expected(7));
-                    assert(StatReg(3) = check_bit) report "Arithmetic add operation Signed Overflow Incorrect";
+                    check_bit := (rand_inptA(7) and rand_inptB(7) and not expected(7)) 
+					or (not rand_inptA(7) and not rand_inptB(7) and expected(7));
+                    assert(StatReg(3) = check_bit) 
+			report "Arithmetic add operation Signed Overflow Incorrect";
 
                 elsif(  op = OP_CP   or op = OP_CPC  or op = OP_CPI  or
                         op = OP_SBIW or op = OP_SUB  or op = OP_SUBI or
                         op = OP_SBC  or op = OP_SBCI) then
 
-                    check_bit := (rand_inptA(7) and not rand_inptB(7) and not expected(7)) or (not rand_inptA(7) and rand_inptB(7) and expected(7));
-                    assert(StatReg(3) = check_bit) report "Arithmetic subtract operation Signed Overflow Incorrect";
+                    check_bit := (rand_inptA(7) and not rand_inptB(7) and not expected(7)) 
+					or (not rand_inptA(7) and rand_inptB(7) and expected(7));
+                    assert(StatReg(3) = check_bit) 
+			report "Arithmetic subtract operation Signed Overflow Incorrect";
 
                 elsif( op = OP_DEC ) then
 
-                    check_bit := not expected(7) and expected(6) and expected(5) and expected(4) and expected(3) and expected(2) and expected(1) and expected(0);
+                    check_bit := not expected(7) and expected(6) and expected(5) and expected(4) and 
+				     expected(3) and expected(2) and expected(1) and expected(0);
                     assert(StatReg(3) = check_bit) report "Decrement operation Signed Overflow Incorrect";
 
                 elsif( op = OP_INC ) then 
-                    check_bit := expected(7) and not expected(6) and not expected(5) and not expected(4) and not expected(3) and not expected(2) and not expected(1) and not expected(0);
+                    check_bit := expected(7) and not expected(6) and not expected(5) and not expected(4) and 
+			     not expected(3) and not expected(2) and not expected(1) and not expected(0);
                     assert(StatReg(3) = check_bit) report "Increment operation Signed Overflow Incorrect";
 
                 elsif( op = OP_NEG ) then
-                    check_bit := (expected(7) and not expected(6) and not expected(5) and not expected(4) and not expected(3) and not expected(2) and not expected(1) and not expected(0));
-                    assert(StatReg(3) = check_bit) report "Arithmetic negate operation Signed Overflow Incorrect";
+                    check_bit := (expected(7) and not expected(6) and not expected(5) and not expected(4) and 
+			      not expected(3) and not expected(2) and not expected(1) and not expected(0));
+                    assert(StatReg(3) = check_bit) 
+			report "Arithmetic negate operation Signed Overflow Incorrect";
 
                 elsif( op = OP_AND  or op = OP_ANDI or op = OP_COM  or
                        op = OP_EOR  or op = OP_OR   or op = OP_ORI ) then
@@ -969,14 +993,16 @@ begin
 
                 if ( op = OP_ADD  or op = OP_ADC ) then 
 
-                    check_bit := (rand_inptA(3) and rand_inptB(3)) or (rand_inptB(3) and not expected(3)) or (rand_inptA(3) and not expected(3));
+                    check_bit := (rand_inptA(3) and rand_inptB(3)) or (rand_inptB(3) and not expected(3)) or 
+				 (rand_inptA(3) and not expected(3));
                     assert(StatReg(5) = check_bit) report "half-carry flag incorrect on add"; 
                      
                 elsif(  op = OP_CPC  or op = OP_CPI  or op = OP_CP   or 
                         op = OP_SBC  or op = OP_SBCI or op = OP_SUB  or 
                         op = OP_SUBI ) then
 
-                    check_bit := (not rand_inptA(3) and rand_inptB(3)) or (rand_inptB(3) and expected(3)) or (expected(3) and not rand_inptA(3));
+                    check_bit := (not rand_inptA(3) and rand_inptB(3)) or (rand_inptB(3) and expected(3)) or 
+				       (expected(3) and not rand_inptA(3));
                     assert(StatReg(5) = check_bit) report "half-carry flag incorrect on subtract";
 
                 elsif ( op = OP_NEG ) then
