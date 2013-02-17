@@ -67,6 +67,7 @@ architecture TB_ARCHITECTURE of alu_tb is
     signal clock    : std_logic;
     signal Result   : std_logic_vector(7 downto 0);
     signal StatReg  : std_logic_vector(7 downto 0);
+    signal prev_zero : std_logic;
 
     --Signal used to stop clock signal generators. should always be FALSE
     signal  END_SIM  :  BOOLEAN := FALSE;
@@ -487,6 +488,9 @@ begin
                         expected := std_logic_vector(unsigned(expected) - 1);
                     end if;
 
+                    -- Grab the old value of the zerp flag
+                    prev_zero := StatReg(1);
+
                     -- check the answer
                     assert( result = expected ) report "Wrong answer random input CPC test";
 
@@ -881,9 +885,13 @@ begin
                 --
                 if ( not ( op = OP_BCLR or op = OP_BLD or 
                            op = OP_BSET or op = OP_BST or 
-                           op = OP_SWAP ) ) then
+                           op = OP_SWAP) ) then
 
-                    if ( OR_REDUCE(expected) = '0' ) then
+                    if (op /= OP_CPC) then
+                        prev_zero = '1'
+                    end if;
+
+                    if ( OR_REDUCE(expected) = '0' and prev_zero = '1') then
                         check_bit := '1';
                     else
                         check_bit := '0';
