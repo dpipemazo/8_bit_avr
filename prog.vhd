@@ -32,8 +32,6 @@ entity  PROG  is
         ZeroLine  :  in  std_logic;
         ProgAB    :  out std_logic_vector(15 downto 0)  -- Program Address Bus (PC)
         -- ProgToWr  :  out std_logic_vector(7 downto 0);  -- Data to write to Memory
-        AddPc     :  out std_logic;                     -- Flag to denote that we are adding 
-                                                        -- PC to a constant
         GetNextIR :  out std_logic;                     -- Signal to get next IR
         PC        :  buffer std_logic_vector(15 downto 0) -- PC for other entities to use
     );
@@ -91,18 +89,20 @@ begin
                     std_match(IR, OpSBRS);
 
 
-    bitMask      := "00000001" when (std_match(IR(2 downto 0), "000")) else
-                    "00000010" when (std_match(IR(2 downto 0), "001")) else
-                    "00000100" when (std_match(IR(2 downto 0), "010")) else
-                    "00001000" when (std_match(IR(2 downto 0), "011")) else
-                    "00010000" when (std_match(IR(2 downto 0), "100")) else
-                    "00100000" when (std_match(IR(2 downto 0), "101")) else
-                    "01000000" when (std_match(IR(2 downto 0), "110")) else
-                    "10000000"; --when (std_match(IR(2 downto 0), "111"))
+    -- bitMask      := "00000001" when (std_match(IR(2 downto 0), "000")) else
+    --                 "00000010" when (std_match(IR(2 downto 0), "001")) else
+    --                 "00000100" when (std_match(IR(2 downto 0), "010")) else
+    --                 "00001000" when (std_match(IR(2 downto 0), "011")) else
+    --                 "00010000" when (std_match(IR(2 downto 0), "100")) else
+    --                 "00100000" when (std_match(IR(2 downto 0), "101")) else
+    --                 "01000000" when (std_match(IR(2 downto 0), "110")) else
+    --                 "10000000"; --when (std_match(IR(2 downto 0), "111"))
 
-    -- Is Bit on bitLookedAt set
-    isBitSet     := '0' when (std_match(bitLookedAt and bitMask, "00000000")) else
-                    '1';
+    -- -- Is Bit on bitLookedAt set
+    -- isBitSet     := '0' when (std_match(bitLookedAt and bitMask, "00000000")) else
+    --                 '1';
+
+    isBitSet     := bitLookedAt(to_integer(unsigned(IR(2 downto 0))));
 
 
     bitLookedAt  := Status when (std_match(IR, BRBC) or std_match(IR, BRBS)) else
@@ -144,7 +144,5 @@ begin
                   PC;
 
     ProgAB     <= PC;
-
-    addPc      <= ToUsePCIn;
 
 end regBehavior;

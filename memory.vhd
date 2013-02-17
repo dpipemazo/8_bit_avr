@@ -112,7 +112,7 @@ entity  Memory  is
         CycleCnt    : in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
         ProgDB      : in  std_logic_vector(15 downto 0); -- Constant to load from memory
         clock       : in  std_logic;
-        PC          : in std_logic_vector(15 downto 0); -- program counter
+        PC          : in  std_logic_vector(15 downto 0); -- program counter
         -- Dealing with memory
         DataDB      : out std_logic_vector(7 downto 0);-- Memory Data Bus
         AddrB       : out std_logic_vector(15 downto 0); -- Address Bus
