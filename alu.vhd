@@ -552,10 +552,11 @@ begin
                                 internal_status_reg(6);   
 
     --
-    -- HANDLE THE 7TH BIT OF THE INTERNAL STATUS REG
+    -- INTERRUPT BIT
     --
-    internal_status_reg(7) <=   -- Set on a bitset
-                                '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "111") ) else
+    internal_status_reg(7) <=   -- Set on a bitset or RETI
+                                '1' when( (std_match(IR, OpBSET) and std_match(IR(6 downto 4), "111") ) or
+                                          std_match(IR, OpRETI) ) else
 
                                 -- Clear on a bitclear
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "111") ) else
