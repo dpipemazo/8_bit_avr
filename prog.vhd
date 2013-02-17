@@ -42,19 +42,19 @@ end  PROG;
 
 architecture regBehavior of PROG is
 
-    signal  PC              :  std_logic_vector(15 downto 0);
                                                         -- Not always used, only on certain instructions
     signal  ToUsePCIn       :  std_logic;               -- Flag to note when to use PCIn
 
     signal  PCinternal      :  std_logic_vector(15 downto 0);
 
-    signal  PCincremented   :  std_logic_vector(15 downto 0);
+    signal  PCaddone        :  std_logic_vector(15 downto 0);
 
     signal  intrHas2Wrds    :  boolean;
     signal  RetCmd          :  boolean;
     signal  SkipCmd         :  boolean;
     signal  isBitSet        :  boolean;
-    signal  isStatusSet     :  boolean;
+
+    signal  UseConstPC      :  std_logic;
 
     signal  constantPC      :  std_logic_vector(15 downto 0);
 
@@ -109,7 +109,7 @@ begin
                     Registers;
 
 
-    internalIR <= ProgDB when (SkipCmd) else
+    internalIR := ProgDB when (SkipCmd) else
                   IR;
 
 
@@ -121,13 +121,13 @@ begin
                   '0';
 
 
-    PCaddone   <= std_logic_vector(unsigned(PC) + '1');
+    PCaddone   := std_logic_vector(unsigned(PC) + '1');
 
     UseConstPC <= '1' when ((std_match(IR, OpJMP)   or -- and CycleCnt = "01") or 
                             (std_match(IR, OpCALL)  and CycleCnt = "10")) else
                   '0';
 
-    ToUsePCIn  <= '1' when ((std_match(IR, OpRJMP)  or -- and CycleCnt = "00") or
+    ToUsePCIn  := '1' when ((std_match(IR, OpRJMP)  or -- and CycleCnt = "00") or
                             (std_match(IR, OpIJMP)) or -- and CycleCnt = "00") or
                             (std_match(IR, OpRCALL) and CycleCnt = "01") or
                             (std_match(IR, OpICALL) and CycleCnt = "01") or
@@ -135,12 +135,12 @@ begin
                   '0';
 
 
-    PCinternal <= PC[15 downto 8] & DataDB when (CycleCnt = "01" and RetCmd) else
+    PCinternal := PC[15 downto 8] & DataDB when (CycleCnt = "01" and RetCmd) else
                   DataDB & PC[7 downto 0]  when (CycleCnt = "10" and RetCmd) else
-                  PCaddone   when (LastCycle or SkipCmd or GetNextIR or
+                  PCaddone   when (LastCycle = '1' or SkipCmd or GetNextIR = '1' or
                                    (CycleCnt = "00" and intrHas2Wrds)) else
-                  constantPC when (UseConstPC) else
-                  PCIn       when (ToUsePCIn)
+                  constantPC when (UseConstPC = '1') else
+                  PCIn       when (ToUsePCIn = '1')
                   PC;
 
     ProgAB     <= PC;
