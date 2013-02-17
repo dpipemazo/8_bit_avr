@@ -102,9 +102,10 @@ entity  ALU  is
         clock     :  in  std_logic;                         -- system clock
         Result    :  buffer std_logic_vector(7 downto 0);      -- ALU result
         StatReg   :  buffer std_logic_vector(7 downto 0);   -- status register
-        cycle_cnt :  in std_logic_vector(1 downto 0)                       -- which clock cycle of a 
+        cycle_cnt :  in std_logic_vector(1 downto 0);       -- which clock cycle of a 
                                                             --  2 clock instruction we're on
                                                             --  Only matters for ADIW, MUL and SBIW
+        result_zero : buffer std_logic                         -- Internal result 0 line
     );
 
 end  ALU;
@@ -296,7 +297,9 @@ begin
     --
     -- CARRY FLAG
     --
-    internal_status_reg(0)  <= adder_carries(7) when(std_match(IR, OpADD) or 
+    internal_status_reg(0)  <=  -- Use the high carry bit out of the adder on
+                                -- a standard add or subtract
+                                adder_carries(7) when(std_match(IR, OpADD) or 
                                                 std_match(IR, OpADC) or 
                                                 std_match(IR, OpSUB) or 
                                                 std_match(IR, OpSBC) or 
@@ -308,29 +311,43 @@ begin
                                                 std_match(IR, OpCPI) or
                                                 std_match(IR, OpSBCI)) else
 
+                                -- Use the shift carry result when performing
+                                --  a shift
                                shift_carry when(std_match(IR, OpROR) or
                                                 std_match(IR, OpASR) or
                                                 std_match(IR, OpLSR)) else
 
+                                -- Carry flag always set on these instructions
                                '1' when( (std_match(IR, OpBSET) and std_match(IR(6 downto 4), "000")) or
                                           std_match(IR, OpCOM) or 
                                          (std_match(IR, OpNEG) and not std_match(result, "00000000"))) else
 
+                                -- Carry flag never set on these instructions
                                '0' when( (std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "000")) or
                                          std_match(IR, OpNEG)) else
 
+                               -- Else, just hold state
                                internal_status_reg(0);
 
     --
     -- ZERO FLAG
     --
-    internal_status_reg(1) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "001") ) else
+    result_zero <= OR_REDUCE(Result);
 
+    internal_status_reg(1) <=   -- Set on a bitset
+                                '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "001") ) else
+
+                                -- clear on a bitclear
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "001") ) else
 
-                                not OR_REDUCE(Result) when (    std_match(IR, OpADC ) or
+                                -- If all bits are 0, after the first clock of any 
+                                --  valid instruction, then this is set. 
+                                not result_zero      when (   (std_match(cycle_cnt, "00") and(
+                                                                    std_match(IR, OpADIW) or
+                                                                    std_match(IR, OpSBIW))) or
+
+                                                                std_match(IR, OpADC ) or
                                                                 std_match(IR, OpADD ) or
-                                                                std_match(IR, OpADIW) or
                                                                 std_match(IR, OpAND ) or
                                                                 std_match(IR, OpANDI) or
                                                                 std_match(IR, OpASR ) or
@@ -347,21 +364,30 @@ begin
                                                                 std_match(IR, OpROR ) or
                                                                 std_match(IR, OpSBC ) or
                                                                 std_match(IR, OpSBCI) or
-                                                                std_match(IR, OpSBIW) or
                                                                 std_match(IR, OpSUB ) or
                                                                 std_match(IR, OpSUBI) ) else
-                                not OR_REDUCE(Result) and StatReg(1) when ( 
-                                                                std_match(IR, OpCPC) ) else
-
+                                -- On the second clock of an ADIW or SBIW, 
+                                --  or the only clock of a CPC, only set if  
+                                --  the zero flag was already set.
+                                not result_zero and StatReg(1) when (
+                                                                std_match(IR, OpCPC) or
+                                                               (std_match(cycle_cnt, "01") and(
+                                                                    std_match(IR, OpADIW) or
+                                                                    std_match(IR, OpSBIW)))) else
+                                -- Else, hold state
                                 internal_status_reg(1);
 
     --
     -- NEGATIVE FLAG
     --
-    internal_status_reg(2) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "010") ) else
+    internal_status_reg(2) <=   -- Set on a bitset
+                                '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "010") ) else
 
+                                -- clear on a bitclear
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "010") ) else
 
+                                -- Set to the high bit of the result for 
+                                --    any valid instruction
                                 Result(7)             when (    std_match(IR, OpADC ) or
                                                                 std_match(IR, OpADD ) or
                                                                 std_match(IR, OpADIW) or
@@ -385,19 +411,27 @@ begin
                                                                 std_match(IR, OpSBIW) or
                                                                 std_match(IR, OpSUB ) or
                                                                 std_match(IR, OpSUBI) ) else
+                                -- else, hold state. 
                                 internal_status_reg(2);
 
     --
     -- SIGNED OVERFLOW FLAG
     --
-    internal_status_reg(3) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "011") ) else
+    internal_status_reg(3) <=   -- Set on a bitset
+                                '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "011") ) else
+                                
+                                -- clear on a bitclear
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "011") ) else
-                
+                                
+                                -- If we are doing a shift, perform an XOR of 
+                                --  the carry flag and the negative flag
                                 internal_status_reg(2) xor internal_status_reg(0) when(
                                                 std_match(IR, OpROR) or
                                                 std_match(IR, OpASR) or
                                                 std_match(IR, OpLSR)) else
 
+                                -- These instructions always clear the signed
+                                --  overflow flag
                                 '0' when(       std_match(IR, OpAND) or 
                                                 std_match(IR, OpANDI) or
                                                 std_match(IR, OpCOM) or
@@ -405,17 +439,23 @@ begin
                                                 std_match(IR, OpOR) or
                                                 std_match(IR, OpORI)) else
 
+                                -- For an add instruction, perform the 
+                                --  xor of the carry into and out of bit 7
                                 adder_carries(7) xor adder_carries(6) when(
                                                 std_match(IR, OpADD) or
                                                 std_match(IR, OpADC) or
                                                 std_match(IR, OpADIW) or
                                                 std_match(IR, OpINC)) else
 
+                                -- On a negate instruction, only set if the 
+                                --  result is equal to 0x80;
                                 not(not result(7) or result(6) or result(5) or 
                                         result(4) or result(3) or result(2) or 
                                         result(1) or result(0)) when (
                                                 std_match(IR, OpNEG)) else
 
+                                -- On a subtract, set this negate the xor of 
+                                --  the carry into and out of bit 7. 
                                 not adder_carries(7) xor adder_carries(6) when(
                                                 std_match(IR, OpSUB)  or 
                                                 std_match(IR, OpSBC)  or 
@@ -427,15 +467,20 @@ begin
                                                 std_match(IR, OpCPI)  or
                                                 std_match(IR, OpSBCI)) else
 
+                                -- Else, hold state
                                 internal_status_reg(3);
 
     --
     -- SIGN BIT
     --
-    internal_status_reg(4) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "100") ) else
+    internal_status_reg(4) <=   -- Set on a bitset
+                                '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "100") ) else
 
+                                -- clear on a bitclear
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "100") ) else
 
+                                -- Always perform the xor of the negative flag
+                                --  and the signed overflow flag
                                 internal_status_reg(2) xor internal_status_reg(3) when (
                                                 std_match(IR, OpADC ) or
                                                 std_match(IR, OpADD ) or
@@ -461,14 +506,18 @@ begin
                                                 std_match(IR, OpSUB ) or
                                                 std_match(IR, OpSUBI) ) else
 
+                                -- Else, hold state
                                 internal_status_reg(4);
 
     --
     -- HALF CARRY
     --
-    internal_status_reg(5) <= adder_carries(3) when (   std_match(IR, OpADC) or
+    internal_status_reg(5) <= -- On an add, simply use the carry out of bit 3
+                              adder_carries(3) when (   std_match(IR, OpADC) or
                                                         std_match(IR, OpADD)) else
 
+                              -- On a subtract, need to flip the carry out of
+                              --    bit 3.
                               not adder_carries(3) when(std_match(IR, OpCP) or
                                                         std_match(IR, OpCPC) or
                                                         std_match(IR, OpCPI) or
@@ -478,29 +527,40 @@ begin
                                                         std_match(IR, OpNEG) or
                                                         std_match(IR, OpSUBI)) else
 
+                            -- Set on a bitset
                             '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "101") ) else
 
+                            -- Clear on a bitclear
                             '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "101") ) else
 
+                            -- Else, hold state
                             internal_status_reg(5);
     --
-    -- INSTRUCTIONS: BLD, BST
+    -- INSTRUCTIONS: BST
     --
-    internal_status_reg(6) <=   OperandA(to_integer(unsigned(IR(2 downto 0)))) when( std_match(IR, OpBST)) else
+    internal_status_reg(6) <=   -- Set the T register to the bit of OperandA
+                                -- described by the low 3 bits of IR on a BST
+                                OperandA(to_integer(unsigned(IR(2 downto 0)))) when( std_match(IR, OpBST)) else
 
+                                -- Set on a bitset
                                 '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "110") ) else
 
+                                -- clear on a bitclear
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "110") ) else
 
+                                -- Else, hold state
                                 internal_status_reg(6);   
 
     --
     -- HANDLE THE 7TH BIT OF THE INTERNAL STATUS REG
     --
-    internal_status_reg(7) <=   '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "111") ) else
+    internal_status_reg(7) <=   -- Set on a bitset
+                                '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "111") ) else
 
+                                -- Clear on a bitclear
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "111") ) else
                                   
+                                -- Else, hold state
                                 internal_status_reg(7);           
 
 

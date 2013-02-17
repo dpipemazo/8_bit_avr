@@ -219,7 +219,13 @@ begin
                            std_match(IR, OpSTYD) or std_match(IR, OpSTDY) or
                            std_match(IR, OpSTZI) or std_match(IR, OpSTZD) or
                            std_match(IR, OpSTDZ) or std_match(IR, OpPUSH) or 
-                           std_match(IR, OpSTS) ) else
+                           std_match(IR, OpSTS)  or std_match(IR, OpJMP)  or
+                           std_match(IR, OpRJMP) or std_match(IR, OpIJMP) or
+                           std_match(IR, OpCALL) or std_match(IR, OpRCALL) or
+                           std_match(IR, OpICALL) or std_match(IR, OpRET) or 
+                           std_match(IR, OpRETI) or std_match(IR, OpBRBC) or
+                           std_match(IR, OpBRBS) or std_match(IR, OpCPSE) or
+                           std_match(IR, OpSBRC) or std_match(IR, OpSBRS)) else
                 -- If not one of the above operations, write to the register
                 --  array.
                  '1';

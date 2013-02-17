@@ -214,10 +214,10 @@ begin
                                 std_match(IR, OpICALL)))) else
                 PC      when(   std_match(IR, OpBRBC) or
                                 std_match(IR, OpBRBS) or
-                               (std_match(CycleCnt, "01") and (
-                                std_match(IR, OpRJMP) or
                                 std_match(IR, OpRCALL) or
-                                ))) else
+                               (std_match(CycleCnt, "01") and 
+                                std_match(IR, OpRCALL) or
+                                )) else
                 XYZ;
 
     AdderInB <= (others => '1') when(   std_match(IR, OpLDXD) or
