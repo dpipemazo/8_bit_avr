@@ -218,9 +218,9 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                 elsif (op = OP_CALL) then
                     ProgDB <= OpCALL;
-                    wait for 20 ns;
+                    wait for 22 ns;
                     ProgDB <= rand_inptB & rand_inptA;
-                    wait for 20 ns;
+                    wait for 18 ns;
                     wait for 20 ns;
                     wait for 20 ns;
 
