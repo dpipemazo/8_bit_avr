@@ -265,6 +265,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                 elsif( op = OP_RET ) then
 
+                    ProgDB <= OpRET;
                     wait for 20 ns;
                     wait for 20 ns;
                     wait for 20 ns;
@@ -275,6 +276,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                 --
                 elsif( op = OP_RETI ) then
 
+                    ProgDB <= OpRETI;
                     wait for 20 ns;
                     wait for 20 ns;
                     wait for 20 ns;

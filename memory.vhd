@@ -214,7 +214,7 @@ begin
                                 std_match(IR, OpICALL)))) else
                 PC      when(   std_match(IR, OpBRBC) or
                                 std_match(IR, OpBRBS) or
-                                std_match(IR, OpRCALL) or
+                                std_match(IR, OpRJMP) or
                                (std_match(CycleCnt, "01") and 
                                 std_match(IR, OpRCALL)
                                 )) else
@@ -233,9 +233,8 @@ begin
                                         std_match(IR, OpPUSH)) or
 
                                       ((std_match(CycleCnt, "00") or
-                                        std_match(CycleCnt, "10")) and (
-                                        std_match(IR, OpRJMP) or
-                                        std_match(IR, OpRCALL)))) else
+                                        std_match(CycleCnt, "10")) and 
+                                        std_match(IR, OpRCALL))) else
 
                 "0000000000000001" when(std_match(IR, OpPOP) or 
                                         std_match(IR, OpRET) or
