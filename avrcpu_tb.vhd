@@ -137,6 +137,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
         reset <= '0';
         wait for 20 ns;
         reset <= '1';
+        wait for 9 ns;
 
         -- Loop forever
         while ( END_SIM = FALSE ) loop
@@ -165,7 +166,10 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                 --
                 if ( op = OP_JMP) then
 
-                    ProgDB<= OpJMP;
+                    temp_op := OpJMP;
+                    temp_op(0) := '0';
+                    temp_op(8 downto 4) := "00000";
+                    ProgDB<= temp_op;
                     wait for 20 ns;
                     ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
