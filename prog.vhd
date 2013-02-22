@@ -30,9 +30,10 @@ entity  PROG  is
         Registers :  in  std_logic_vector(7 downto 0);  -- The ALU 
         Status    :  in  std_logic_vector(7 downto 0);
         ZeroLine  :  in  std_logic;
-        ProgAB    :  out std_logic_vector(15 downto 0)  -- Program Address Bus (PC)
+		  clock     :  in  std_logic;
+        ProgAB    :  out std_logic_vector(15 downto 0); -- Program Address Bus (PC)
         -- ProgToWr  :  out std_logic_vector(7 downto 0);  -- Data to write to Memory
-        GetNextIR :  out std_logic;                     -- Signal to get next IR
+        GetNextIR :  buffer std_logic;                     -- Signal to get next IR
         PC        :  buffer std_logic_vector(15 downto 0) -- PC for other entities to use
     );
 
@@ -57,6 +58,8 @@ architecture regBehavior of PROG is
     signal  constantPC      :  std_logic_vector(15 downto 0);
 
     signal  bitMask         :  std_logic_vector(15 downto 0);
+	 
+	 signal  bitLookedAt     :  std_logic_vector(15 downto 0);
 
     -- Internal IR, can be either IR, or what the next IR is for skip instructions
     signal  internalIR      :  std_logic_vector(15 downto 0); 
@@ -71,7 +74,7 @@ begin
             PC <= PCinternal;
 
             if CycleCnt = "00" then
-                constantPC := ProgDB;
+                constantPC <= ProgDB;
             end if;
 
         end if;
@@ -80,16 +83,16 @@ begin
 
     --Convenience Signals (booleans)
 
-    intrHas2Wrds := std_match(internalIR, OpCALL) or std_match(internalIR, OpJMP) or
+    intrHas2Wrds <= std_match(internalIR, OpCALL) or std_match(internalIR, OpJMP) or
                     std_match(internalIR, OpLDS)  or std_match(internalIR, OpSTS);
 
-    RetCmd       := std_match(IR, OpRet) or std_match(IR, OpRETI);
+    RetCmd       <= std_match(IR, OpRet) or std_match(IR, OpRETI);
 
-    SkipCmd      := std_match(IR, OpCPSE) or std_match(IR, OpSBRC) or
+    SkipCmd      <= std_match(IR, OpCPSE) or std_match(IR, OpSBRC) or
                     std_match(IR, OpSBRS);
 
 
-    -- bitMask      := "00000001" when (std_match(IR(2 downto 0), "000")) else
+    -- bitMask      <= "00000001" when (std_match(IR(2 downto 0), "000")) else
     --                 "00000010" when (std_match(IR(2 downto 0), "001")) else
     --                 "00000100" when (std_match(IR(2 downto 0), "010")) else
     --                 "00001000" when (std_match(IR(2 downto 0), "011")) else
@@ -99,35 +102,35 @@ begin
     --                 "10000000"; --when (std_match(IR(2 downto 0), "111"))
 
     -- -- Is Bit on bitLookedAt set
-    -- isBitSet     := '0' when (std_match(bitLookedAt and bitMask, "00000000")) else
+    -- isBitSet     <= '0' when (std_match(bitLookedAt and bitMask, "00000000")) else
     --                 '1';
 
-    isBitSet     := bitLookedAt(to_integer(unsigned(IR(2 downto 0))));
+    isBitSet     <= bitLookedAt(to_integer(unsigned(IR(2 downto 0)))) = '1';
 
 
-    bitLookedAt  := Status when (std_match(IR, BRBC) or std_match(IR, BRBS)) else
+    bitLookedAt  <= Status when (std_match(IR, OpBRBC) or std_match(IR, OpBRBS)) else
                     Registers;
 
 
-    internalIR := ProgDB when (SkipCmd) else
+    internalIR <= ProgDB when (SkipCmd) else
                   IR;
 
 
-    GetNextIR  <= '1' when ((std_match(IR, BRBS) and not isBitSet) or
-                            (std_match(IR, BRBC) and     isBitSet) or
-                            (std_match(IR, SBRS) and not isBitSet) or
-                            (std_match(IR, SBRC) and     isBitSet) or
-                            (std_match(IR, CPSE) and not ZeroLine)) else
+    GetNextIR  <= '1' when ((std_match(IR, OpBRBS) and not isBitSet) or
+                            (std_match(IR, OpBRBC) and     isBitSet) or
+                            (std_match(IR, OpSBRS) and not isBitSet) or
+                            (std_match(IR, OpSBRC) and     isBitSet) or
+                            (std_match(IR, OpCPSE) and ZeroLine = '0')) else
                   '0';
 
 
-    PCaddone   := std_logic_vector(unsigned(PC) + '1');
+    PCaddone   <= std_logic_vector(unsigned(PC) + 1);
 
-    UseConstPC <= '1' when ((std_match(IR, OpJMP)   or -- and CycleCnt = "01") or 
+    UseConstPC <= '1' when ((std_match(IR, OpJMP))   or -- and CycleCnt = "01") or 
                             (std_match(IR, OpCALL)  and CycleCnt = "10")) else
                   '0';
 
-    ToUsePCIn  := '1' when ((std_match(IR, OpRJMP)  or -- and CycleCnt = "00") or
+    ToUsePCIn  <= '1' when ((std_match(IR, OpRJMP))  or -- and CycleCnt = "00") or
                             (std_match(IR, OpIJMP)) or -- and CycleCnt = "00") or
                             (std_match(IR, OpRCALL) and CycleCnt = "01") or
                             (std_match(IR, OpICALL) and CycleCnt = "01") or
@@ -135,12 +138,12 @@ begin
                   '0';
 
 
-    PCinternal := PC[15 downto 8] & DataDB when (CycleCnt = "01" and RetCmd) else
-                  DataDB & PC[7 downto 0]  when (CycleCnt = "10" and RetCmd) else
+    PCinternal <= PC(15 downto 8) & DataDB when (CycleCnt = "01" and RetCmd) else
+                  DataDB & PC(7 downto 0)  when (CycleCnt = "10" and RetCmd) else
                   PCaddone   when (LastCycle = '1' or SkipCmd or GetNextIR = '1' or
                                    (CycleCnt = "00" and intrHas2Wrds)) else
                   constantPC when (UseConstPC = '1') else
-                  PCIn       when (ToUsePCIn = '1')
+                  PCIn       when (ToUsePCIn = '1') else
                   PC;
 
     ProgAB     <= PC;
