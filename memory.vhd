@@ -216,7 +216,7 @@ begin
                                 std_match(IR, OpBRBS) or
                                 std_match(IR, OpRCALL) or
                                (std_match(CycleCnt, "01") and 
-                                std_match(IR, OpRCALL) or
+                                std_match(IR, OpRCALL)
                                 )) else
                 XYZ;
 
@@ -257,8 +257,8 @@ begin
 
                 "0000" & IR(11 downto 0) when(
                                        (std_match(CycleCnt, "01") and
-                                        std_match(IR, OpRJMP) or
-                                        std_match(IR, OpRCALL))) else
+                                        std_match(IR, OpRCALL)) or 
+													 std_match(IR, OpRJMP)) else
 
                 "000000000" & IR(9 downto 3) when(
                                         std_match(IR, OpBRBC) or
@@ -375,7 +375,7 @@ begin
                                 std_match(IR, OpSTS) or
                                 std_match(IR, OpCALL) or
                                 std_match(IR, OpRCALL) or
-                                std_match(IR, OpICALL))) else
+                                std_match(IR, OpICALL)))) else
                     '1';
 --
 -- Now assign the values of clockedRead and clockedWrite to DataRd and DataWr, 

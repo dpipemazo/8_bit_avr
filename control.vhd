@@ -184,7 +184,7 @@ begin
     --
     lastCycle <=    '1' when (( CycleCnt = "UU") or 
                                 std_match(CycleCnt, num_cycles)) else
-                    '0'
+                    '0';
 
     --
     -- Implement the clock cycle counter and update IR
@@ -194,7 +194,7 @@ begin
         if ( rising_edge(clock) ) then
             -- Need the check for UU to handle simulation startup issues. 
             --      shouldn't make a difference in imeplementation.
-            if (GetNextIR)) then
+            if (GetNextIR = '1') then
                 -- If we reached the end of a cycle, reset the counter
                 CycleCnt <= "00";
                 IR <= ProgDB;
