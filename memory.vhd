@@ -257,7 +257,7 @@ begin
 
                 "0000" & IR(11 downto 0) when(
                                        (std_match(CycleCnt, "01") and
-                                        std_match(IR, OpRJMP) or
+                                        std_match(IR, OpR) or
                                         std_match(IR, OpRCALL))) else
 
                 "000000000" & IR(9 downto 3) when(
