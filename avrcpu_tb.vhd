@@ -134,6 +134,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
         --
         -- Reset the system, to get it into the correct state
         --
+        ProgDB <= OpADD;
         reset <= '0';
         wait for 20 ns;
         reset <= '1';
