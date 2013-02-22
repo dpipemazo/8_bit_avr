@@ -182,7 +182,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                 elsif (op = OP_RJMP) then
 
                     temp_op := OpRJMP;
-                    temp_op(11 downto 0) := rand_inptA(11 downto 0);
+                    temp_op(11 downto 0) := rand_inptB(3 downto 0) & rand_inptA(7 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
                     wait for 20 ns;
@@ -230,7 +230,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                 elsif (op = OP_RCALL) then
                     temp_op := OpRCALL;
-                    temp_op(11 downto 0) := rand_inptA(11 downto 0);
+                    temp_op(11 downto 0) := rand_inptB(3 downto 0) & rand_inptA(7 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
                     wait for 20 ns;
@@ -525,8 +525,6 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     wait for 20 ns;
 
                 end if;
-
-
             end loop;
         end loop;
     end process;
