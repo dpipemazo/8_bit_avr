@@ -193,102 +193,102 @@ begin
 
 end regBehavior;
 
--- Include std libraries
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.numeric_std.all;
+-- -- Include std libraries
+-- library ieee;
+-- use ieee.std_logic_1164.all;
+-- use ieee.std_logic_arith.all;
+-- use ieee.numeric_std.all;
 
--- Include Glen's opcode definitions, and the ALU, and REG entities
-library work;
-use work.opcodes.all;
---use work.alu;
-use work.control;
-use work.reg;
-
---
---  REG_TEST
---
---  This is the register array testing interface.  It just brings all the
---  important register array signals out for testing along with the
---  Instruction Register. 
---
---  This is included mostly for compatibility with Glen's Code. In addition
---  our test vectors are written off of this entity.
---
---  The main thing that this entity does it tie the ALU's CycleCnt output to
---  the REG's entity (an input that the test-bench does not supply)
---
---  Inputs:
---    IR      - Instruction Register (16 bits)
---    RegIn   - input to the register array (8 bits)
---    clock   - the system clock
---
---  Outputs:
---    RegAOut - register bus A output (8 bits), eventually will connect to ALU
---    RegBOut - register bus B output (8 bits), eventually will connect to ALU
---
-
-entity  REG_TEST  is
-
-    port(
-        IR        :  in  opcode_word;                   -- Instruction Register
-        RegIn     :  in  std_logic_vector(7 downto 0);  -- input register bus
-        clock     :  in  std_logic;                     -- system clock
-        RegAOut   :  out std_logic_vector(7 downto 0);  -- register bus A out
-        RegBOut   :  out std_logic_vector(7 downto 0)   -- register bus B out
-    );
-
-end  REG_TEST;
-
-architecture RegTestBehavior of REG_TEST is
-
-    -- Interconnects between Control unit and Register Unit
-    signal WriteReg : std_logic;                     -- Write signal for registers
-    signal RegInSel : std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
-    signal CycleCnt : std_logic_vector(1 downto 0);  -- Clock cycle we are on of instruction
-    signal Addr     : std_logic_vector(15 downto 0);  -- Address bus
-
-    -- Signals that are output that we trash
-    -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
-    -- signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
-    signal SP        : std_logic_vector(15 downto 0);
-    signal XYZ       : std_logic_vector(15 downto 0);
-    signal IR_out    : std_logic_vector(15 downto 0);
+-- -- Include Glen's opcode definitions, and the ALU, and REG entities
+-- library work;
+-- use work.opcodes.all;
+-- --use work.alu;
+-- use work.control;
+-- use work.reg;
 
 
-    signal internalAOut : std_logic_vector(7 downto 0);
-    signal internalBOut : std_logic_vector(7 downto 0);
+--  -- REG_TEST
 
-    -- Constants
-    constant reset      : std_logic := '1';          -- Don't reset in these tests
-    constant Write_SP   : std_logic := '0';          -- Don't want to write to SP in tests
-    constant writeX     : std_logic := '0';          -- Don't want to write to X in tests
-    constant writeY     : std_logic := '0';          -- Don't want to write to Y in tests
-    constant writeZ     : std_logic := '0';          -- Don't want to write to Z in tests
-    constant selXYZ     : std_logic_vector(1 downto 0)  := "00";-- Don't care about read XYZ
-    constant Zero16Bits : std_logic_vector(15 downto 0) := (others => '0');
+--  -- This is the register array testing interface.  It just brings all the
+--  -- important register array signals out for testing along with the
+--  -- Instruction Register. 
+
+--  -- This is included mostly for compatibility with Glen's Code. In addition
+--  -- our test vectors are written off of this entity.
+
+--  -- The main thing that this entity does it tie the ALU's CycleCnt output to
+--  -- the REG's entity (an input that the test-bench does not supply)
+
+--  -- Inputs:
+--  --   IR      - Instruction Register (16 bits)
+--  --   RegIn   - input to the register array (8 bits)
+--  --   clock   - the system clock
+
+--  -- Outputs:
+--  --   RegAOut - register bus A output (8 bits), eventually will connect to ALU
+--  --   RegBOut - register bus B output (8 bits), eventually will connect to ALU
 
 
-begin
+-- entity  REG_TEST  is
 
-    --MemTest : entity Memory  port map(IR, XYZ, SP, RegAOut, CycleCnt, MemCnst, DataDB, selXYZ, writeXYZ, Addr);
-    ConTest : entity Control port map(clock => clock,    -- Clock
-                                      reset => reset,    -- Reset is held high (not reset)
-                                      SP_in => Addr,     -- SP should be off of Addr Bus
-                                      Write_SP => Write_SP,
-                                      IR_in  => IR,
-                                      IR_out => IR_out,    -- Same instruction register 
-                                      ProgDB => Zero16Bits,-- Not testing "m" instructions 
-                                      SP => SP,            -- Trash SP
-                                      WriteReg => WriteReg, 
-                                      RegInSel => RegInSel,
-                                      CycleCnt => CycleCnt);
-    -- Map RegIn to AluIn and DataDB for these tests
-    REGTest : entity REG     port map(IR, RegIn, RegIn, clock, CycleCnt, WriteReg, RegInSel, selXYZ, writeX, writeY, writeZ, Zero16Bits, internalAOut, internalBOut, XYZ);
-    --ALUTest : entity ALU     port map(IR, internalAOut, internalBOut, clock, Result, StatReg);
+--     port(
+--         IR        :  in  opcode_word;                   -- Instruction Register
+--         RegIn     :  in  std_logic_vector(7 downto 0);  -- input register bus
+--         clock     :  in  std_logic;                     -- system clock
+--         RegAOut   :  out std_logic_vector(7 downto 0);  -- register bus A out
+--         RegBOut   :  out std_logic_vector(7 downto 0)   -- register bus B out
+--     );
 
-    RegAOut <= internalAOut;
-    RegBOut <= internalBOut;
+-- end  REG_TEST;
 
-end architecture ; -- RegTestBehavior
+-- architecture RegTestBehavior of REG_TEST is
+
+--     -- Interconnects between Control unit and Register Unit
+--     signal WriteReg : std_logic;                     -- Write signal for registers
+--     signal RegInSel : std_logic;                     -- 0 = ALU, 1 = Memory Data Bus
+--     signal CycleCnt : std_logic_vector(1 downto 0);  -- Clock cycle we are on of instruction
+--     signal Addr     : std_logic_vector(15 downto 0);  -- Address bus
+
+--     -- Signals that are output that we trash
+--     -- signal Result    : std_logic_vector(7 downto 0);  -- Trash ALU result
+--     -- signal StatReg   : std_logic_vector(7 downto 0);  -- Trash Status Reg result
+--     signal SP        : std_logic_vector(15 downto 0);
+--     signal XYZ       : std_logic_vector(15 downto 0);
+--     signal IR_out    : std_logic_vector(15 downto 0);
+
+
+--     signal internalAOut : std_logic_vector(7 downto 0);
+--     signal internalBOut : std_logic_vector(7 downto 0);
+
+--     -- Constants
+--     constant reset      : std_logic := '1';          -- Don't reset in these tests
+--     constant Write_SP   : std_logic := '0';          -- Don't want to write to SP in tests
+--     constant writeX     : std_logic := '0';          -- Don't want to write to X in tests
+--     constant writeY     : std_logic := '0';          -- Don't want to write to Y in tests
+--     constant writeZ     : std_logic := '0';          -- Don't want to write to Z in tests
+--     constant selXYZ     : std_logic_vector(1 downto 0)  := "00";-- Don't care about read XYZ
+--     constant Zero16Bits : std_logic_vector(15 downto 0) := (others => '0');
+
+
+-- begin
+
+--     --MemTest : entity Memory  port map(IR, XYZ, SP, RegAOut, CycleCnt, MemCnst, DataDB, selXYZ, writeXYZ, Addr);
+--     ConTest : entity Control port map(clock => clock,    -- Clock
+--                                       reset => reset,    -- Reset is held high (not reset)
+--                                       SP_in => Addr,     -- SP should be off of Addr Bus
+--                                       Write_SP => Write_SP,
+--                                       IR_in  => IR,
+--                                       IR_out => IR_out,    -- Same instruction register 
+--                                       ProgDB => Zero16Bits,-- Not testing "m" instructions 
+--                                       SP => SP,            -- Trash SP
+--                                       WriteReg => WriteReg, 
+--                                       RegInSel => RegInSel,
+--                                       CycleCnt => CycleCnt);
+--     -- Map RegIn to AluIn and DataDB for these tests
+--     REGTest : entity REG     port map(IR, RegIn, RegIn, clock, CycleCnt, WriteReg, RegInSel, selXYZ, writeX, writeY, writeZ, Zero16Bits, internalAOut, internalBOut, XYZ);
+--     --ALUTest : entity ALU     port map(IR, internalAOut, internalBOut, clock, Result, StatReg);
+
+--     RegAOut <= internalAOut;
+--     RegBOut <= internalBOut;
+
+-- end architecture ; -- RegTestBehavior
