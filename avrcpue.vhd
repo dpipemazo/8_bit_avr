@@ -172,6 +172,7 @@ begin
                     Registers => ALU_result,
                     Status    => StatusReg,
                     ZeroLine  => result_zero,
+                    clock     => clock,
                     ProgAB    => ProgAB,
                     GetNextIR => GetNextIR,
                     PC        => PC
