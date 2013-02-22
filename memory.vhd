@@ -138,7 +138,7 @@ signal AdderInB : std_logic_vector(15 downto 0);
 signal AdderResult : std_logic_vector(15 downto 0);
 signal clockedRead : std_logic;
 signal clockedWrite : std_logic;
-signal latchedArrd : std_logic_vector(15 downto 0);
+signal latchedAddr : std_logic_vector(15 downto 0);
 
 begin
 
@@ -391,124 +391,124 @@ end memoryBehavior;
 -- Now declare the testable memory unit
 --
 
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.numeric_std.all;
+-- library ieee;
+-- use ieee.std_logic_1164.all;
+-- use ieee.std_logic_arith.all;
+-- use ieee.numeric_std.all;
 
-library work;
-use work.opcodes.all;
-use work.alu;
-use work.reg;
-use work.control;
-use work.memory;
+-- library work;
+-- use work.opcodes.all;
+-- use work.alu;
+-- use work.reg;
+-- use work.control;
+-- use work.memory;
 
 
-entity  MEM_TEST  is
+-- entity  MEM_TEST  is
 
-    port (
-        IR      :  in     opcode_word;                      -- Instruction Register
-        ProgDB  :  in     std_logic_vector(15 downto 0);    -- second word of instruction
-        Reset   :  in     std_logic;                        -- system reset signal (active low)
-        clock   :  in     std_logic;                        -- system clock
-        DataAB  :  out    std_logic_vector(15 downto 0);    -- data address bus
-        DataDB  :  inout  std_logic_vector(7 downto 0);     -- data data bus
-        DataRd  :  out    std_logic;                        -- data read (active low)
-        DataWr  :  out    std_logic                         -- data write (active low)
-    );
+--     port (
+--         IR      :  in     opcode_word;                      -- Instruction Register
+--         ProgDB  :  in     std_logic_vector(15 downto 0);    -- second word of instruction
+--         Reset   :  in     std_logic;                        -- system reset signal (active low)
+--         clock   :  in     std_logic;                        -- system clock
+--         DataAB  :  out    std_logic_vector(15 downto 0);    -- data address bus
+--         DataDB  :  inout  std_logic_vector(7 downto 0);     -- data data bus
+--         DataRd  :  out    std_logic;                        -- data read (active low)
+--         DataWr  :  out    std_logic                         -- data write (active low)
+--     );
 
-end  MEM_TEST;
+-- end  MEM_TEST;
 
-architecture MemTestBehavior of MEM_TEST is
+-- architecture MemTestBehavior of MEM_TEST is
 
-signal OperandA : std_logic_vector(7 downto 0);
-signal OperandB : std_logic_vector(7 downto 0);
-signal ALU_result : std_logic_vector(7 downto 0);
-signal StatusReg : std_logic_vector(7 downto 0);
-signal cycle_count : std_logic_vector(1 downto 0);
-signal write_register : std_logic;
-signal RegInSel : std_logic;
-signal selXYZ : std_logic_vector(1 downto 0);
-signal writeX : std_logic;
-signal writeY : std_logic;
-signal writeZ : std_logic;
-signal writeSP: std_logic;
-signal XYZ : std_logic_vector(15 downto 0);
-signal IR_from_control : opcode_word;
-signal StackPointer : std_logic_vector(15 downto 0);
-signal writeData : std_logic;
-signal newXYZ : std_logic_vector(15 downto 0);
+-- signal OperandA : std_logic_vector(7 downto 0);
+-- signal OperandB : std_logic_vector(7 downto 0);
+-- signal ALU_result : std_logic_vector(7 downto 0);
+-- signal StatusReg : std_logic_vector(7 downto 0);
+-- signal cycle_count : std_logic_vector(1 downto 0);
+-- signal write_register : std_logic;
+-- signal RegInSel : std_logic;
+-- signal selXYZ : std_logic_vector(1 downto 0);
+-- signal writeX : std_logic;
+-- signal writeY : std_logic;
+-- signal writeZ : std_logic;
+-- signal writeSP: std_logic;
+-- signal XYZ : std_logic_vector(15 downto 0);
+-- signal IR_from_control : opcode_word;
+-- signal StackPointer : std_logic_vector(15 downto 0);
+-- signal writeData : std_logic;
+-- signal newXYZ : std_logic_vector(15 downto 0);
 
-signal FakeX : std_logic_vector(15 downto 0);
+-- signal FakeX : std_logic_vector(15 downto 0);
   
-begin
+-- begin
 
 --
 -- DO A LOT OF WIRING
 --
 
-    ALUUnit : entity ALU port map(
-                    IR => IR_from_control, 
-                    OperandA => OperandA, 
-                    OperandB => OperandB, 
-                    clock => clock, 
-                    Result => ALU_result,
-                    StatReg => StatusReg,
-                    cycle_cnt => cycle_count
-                );
+    -- ALUUnit : entity ALU port map(
+    --                 IR => IR_from_control, 
+    --                 OperandA => OperandA, 
+    --                 OperandB => OperandB, 
+    --                 clock => clock, 
+    --                 Result => ALU_result,
+    --                 StatReg => StatusReg,
+    --                 cycle_cnt => cycle_count
+    --             );
 
-    REGUnit : entity REG port map(
-                    IR => IR_from_control, 
-                    DataDB => DataDB, 
-                    ALUIn => ALU_result, 
-                    clock => clock, 
-                    CycleCnt => cycle_count, 
-                    WriteReg => write_register, 
-                    RegInSel => RegInSel,
-                    selXYZ => selXYZ,
-                    writeX => writeX, 
-                    writeY => writeY, 
-                    writeZ => writeZ, 
-                    Addr => newXYZ,
-                    RegAOut => OperandA, 
-                    RegBOut => OperandB, 
-                    XYZ => XYZ
-                );
+    -- REGUnit : entity REG port map(
+    --                 IR => IR_from_control, 
+    --                 DataDB => DataDB, 
+    --                 ALUIn => ALU_result, 
+    --                 clock => clock, 
+    --                 CycleCnt => cycle_count, 
+    --                 WriteReg => write_register, 
+    --                 RegInSel => RegInSel,
+    --                 selXYZ => selXYZ,
+    --                 writeX => writeX, 
+    --                 writeY => writeY, 
+    --                 writeZ => writeZ, 
+    --                 Addr => newXYZ,
+    --                 RegAOut => OperandA, 
+    --                 RegBOut => OperandB, 
+    --                 XYZ => XYZ
+    --             );
 
-    ControlUnit : entity Control port map(
-                    clock => clock, 
-                    reset => Reset, 
-                    SP_in => newXYZ, 
-                    Write_SP => writeSP,
-                    IR_in => IR,  
-                    IR_out => IR_from_control, 
-                    ProgDB => ProgDB, 
-                    SP => StackPointer, 
-                    WriteReg => write_register, 
-                    RegInSel => RegInSel, 
-                    CycleCnt => cycle_count
-                );
+    -- ControlUnit : entity Control port map(
+    --                 clock => clock, 
+    --                 reset => Reset, 
+    --                 SP_in => newXYZ, 
+    --                 Write_SP => writeSP,
+    --                 IR_in => IR,  
+    --                 IR_out => IR_from_control, 
+    --                 ProgDB => ProgDB, 
+    --                 SP => StackPointer, 
+    --                 WriteReg => write_register, 
+    --                 RegInSel => RegInSel, 
+    --                 CycleCnt => cycle_count
+    --             );
 
-    MemUnit : entity memory port map(
-                    IR => IR_from_control, 
-                    XYZ => XYZ, 
-                    SP => StackPointer, 
-                    RegA => OperandA, 
-                    CycleCnt => cycle_count, 
-                    ProgDB => ProgDB, 
-                    clock => clock, 
-                    DataDB => DataDB, 
-                    AddrB => DataAB, 
-                    DataRd => DataRd, 
-                    DataWr => writeData, 
-                    selXYZ => selXYZ, 
-                    writeX => writeX, 
-                    writeY => writeY, 
-                    writeZ => writeZ, 
-                    writeSP => writeSP,
-                    newXYZ => newXYZ
-                );
+    -- MemUnit : entity memory port map(
+    --                 IR => IR_from_control, 
+    --                 XYZ => XYZ, 
+    --                 SP => StackPointer, 
+    --                 RegA => OperandA, 
+    --                 CycleCnt => cycle_count, 
+    --                 ProgDB => ProgDB, 
+    --                 clock => clock, 
+    --                 DataDB => DataDB, 
+    --                 AddrB => DataAB, 
+    --                 DataRd => DataRd, 
+    --                 DataWr => writeData, 
+    --                 selXYZ => selXYZ, 
+    --                 writeX => writeX, 
+    --                 writeY => writeY, 
+    --                 writeZ => writeZ, 
+    --                 writeSP => writeSP,
+    --                 newXYZ => newXYZ
+    --             );
 
-    DataWr <= writeData;
+    -- DataWr <= writeData;
 
-end architecture;
+-- end architecture;
