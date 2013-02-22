@@ -26,11 +26,11 @@ entity  PROG  is
         CycleCnt  :  in  std_logic_vector(1 downto 0);  -- The clk of an instruction we're on
         LastCycle :  in  std_logic;                     -- The last cycle of an instruction
         ProgDB    :  in  std_logic_vector(15 downto 0); -- Program Data Bus
-        DataDB    :  in  std_logic_vector(15 downto 0); -- Data Data Bus
+        DataDB    :  in  std_logic_vector(7 downto 0);  -- Data Data Bus
         Registers :  in  std_logic_vector(7 downto 0);  -- The ALU 
         Status    :  in  std_logic_vector(7 downto 0);
         ZeroLine  :  in  std_logic;
-		  clock     :  in  std_logic;
+        clock     :  in  std_logic;
         ProgAB    :  out std_logic_vector(15 downto 0); -- Program Address Bus (PC)
         -- ProgToWr  :  out std_logic_vector(7 downto 0);  -- Data to write to Memory
         GetNextIR :  buffer std_logic;                     -- Signal to get next IR
