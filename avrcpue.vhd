@@ -86,9 +86,6 @@ signal IR_from_control : opcode_word;
 signal StackPointer : std_logic_vector(15 downto 0);
 signal writeData : std_logic;
 signal newXYZ : std_logic_vector(15 downto 0);
-
-signal FakeX : std_logic_vector(15 downto 0);
-
 signal PC : std_logic_vector(15 downto 0); -- program counter
 signal GetNextIR : std_logic;
 signal lastCycle : std_logic;
