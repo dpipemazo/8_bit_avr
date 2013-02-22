@@ -57,9 +57,9 @@ architecture regBehavior of PROG is
 
     signal  constantPC      :  std_logic_vector(15 downto 0);
 
-    signal  bitMask         :  std_logic_vector(15 downto 0);
+    -- signal  bitMask         :  std_logic_vector(15 downto 0);
 	 
-	 signal  bitLookedAt     :  std_logic_vector(15 downto 0);
+    signal  bitLookedAt     :  std_logic_vector(7 downto 0);
 
     -- Internal IR, can be either IR, or what the next IR is for skip instructions
     signal  internalIR      :  std_logic_vector(15 downto 0); 
