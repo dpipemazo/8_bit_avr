@@ -255,10 +255,17 @@ begin
                                         std_match(IR, OpSTDY) or
                                         std_match(IR, OpSTDZ)) else
 
-                "0000" & IR(11 downto 0) when(
+                -- Perform a positive relative jump
+                "0000" & IR(11 downto 0) when( (IR(11) = '0') and (
                                        (std_match(CycleCnt, "01") and
                                         std_match(IR, OpRCALL)) or 
-													 std_match(IR, OpRJMP)) else
+													 std_match(IR, OpRJMP))) else
+
+                -- Perform a negative relative jump
+                "1111" & IR(11 downto 0) when( (IR(11) = '1') and (
+                                       (std_match(CycleCnt, "01") and
+                                        std_match(IR, OpRCALL)) or 
+                                                     std_match(IR, OpRJMP))) else
 
                 "000000000" & IR(9 downto 3) when(
                                         std_match(IR, OpBRBC) or
