@@ -16,6 +16,9 @@
 --
 --  REVISION HISTORY
 --      2/23/13 Dan Pipe-Mazo   Initial Revision
+--      2/23/13 Dan Pipe-Mazo   Killed Bug doe to trashing
+--                              SBRS test with a poor choice
+--                              of LDI
 ---------------------------------------------------------
 
 --
