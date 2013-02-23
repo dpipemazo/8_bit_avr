@@ -27,7 +27,7 @@ entity  PROG  is
         LastCycle :  in  std_logic;                     -- The last cycle of an instruction
         ProgDB    :  in  std_logic_vector(15 downto 0); -- Program Data Bus
         DataDB    :  in  std_logic_vector(7 downto 0);  -- Data Data Bus
-        Registers :  in  std_logic_vector(7 downto 0);  -- The ALU 
+        Registers :  in  std_logic_vector(7 downto 0);  -- The Register Unit
         Status    :  in  std_logic_vector(7 downto 0);
         ZeroLine  :  in  std_logic;
         clock     :  in  std_logic;
@@ -130,7 +130,7 @@ begin
                             (std_match(IR, OpCALL)  and CycleCnt = "10")) else
                   '0';
 
-    ToUsePCIn  <= '1' when ((std_match(IR, OpRJMP))  or -- and CycleCnt = "00") or
+    ToUsePCIn  <= '1' when ((std_match(IR, OpRJMP)) or -- and CycleCnt = "00") or
                             (std_match(IR, OpIJMP)) or -- and CycleCnt = "00") or
                             (std_match(IR, OpRCALL) and CycleCnt = "01") or
                             (std_match(IR, OpICALL) and CycleCnt = "01") or
