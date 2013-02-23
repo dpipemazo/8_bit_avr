@@ -73,6 +73,7 @@ architecture regBehavior of PROG is
 
 begin
 
+    -- Update PC on clock edges.
     process (clock)
     begin
 
@@ -90,39 +91,37 @@ begin
 
     --Convenience Signals (booleans)
 
+    -- An instruction which has a constant value in program memory associated with
+    --  it.
     intrHas2Wrds <= std_match(internalIR, OpCALL) or std_match(internalIR, OpJMP) or
                     std_match(internalIR, OpLDS)  or std_match(internalIR, OpSTS);
 
+    -- An instruction which is a return
     RetCmd       <= std_match(IR, OpRet) or std_match(IR, OpRETI);
 
+    -- An instruction which is a skip
     SkipCmd      <= std_match(IR, OpCPSE) or std_match(IR, OpSBRC) or
                     std_match(IR, OpSBRS);
 
-
-    -- bitMask      <= "00000001" when (std_match(IR(2 downto 0), "000")) else
-    --                 "00000010" when (std_match(IR(2 downto 0), "001")) else
-    --                 "00000100" when (std_match(IR(2 downto 0), "010")) else
-    --                 "00001000" when (std_match(IR(2 downto 0), "011")) else
-    --                 "00010000" when (std_match(IR(2 downto 0), "100")) else
-    --                 "00100000" when (std_match(IR(2 downto 0), "101")) else
-    --                 "01000000" when (std_match(IR(2 downto 0), "110")) else
-    --                 "10000000"; --when (std_match(IR(2 downto 0), "111"))
-
-    -- -- Is Bit on bitLookedAt set
-    -- isBitSet     <= '0' when (std_match(bitLookedAt and bitMask, "00000000")) else
-    --                 '1';
-
+    -- If the bit which is considered at in a branch or skip instruction is
+    --  equal to 1
     isBitSet     <= bitLookedAt(to_integer(unsigned(IR(2 downto 0)))) = '1';
 
 
+    -- If doing a BRBC or BRBS, use the status register to get the data for checking
+    --  to see if the bit is set, otherwise use the data from the registers unit
     bitLookedAt  <= Status when (std_match(IR, OpBRBC) or std_match(IR, OpBRBS)) else
                     Registers;
 
 
+    -- If there is a skip, then need to remember the next instruction
     internalIR <= constantPC when (SkipCmd) else
                   IR;
 
 
+    -- Branches and skips are defined to take their maximum number of clocks. 
+    --  this signal is generated to end a branch or skip early in accordance
+    --  with the logic of the skip.
     GetNextIR  <= '1' when ((std_match(IR, OpBRBS) and not isBitSet) or
                             (std_match(IR, OpBRBC) and     isBitSet) or
                             (std_match(IR, OpSBRS) and not isBitSet) or
@@ -132,12 +131,15 @@ begin
                   '0';
 
 
+    -- PC = PC + 1
     PCaddone   <= std_logic_vector(unsigned(PC) + 1);
 
+    -- If we have an instruction which needs the second instruction word
     UseConstPC <= '1' when ((std_match(IR, OpJMP))   or -- and CycleCnt = "01") or 
                             (std_match(IR, OpCALL)  and CycleCnt = "10")) else
                   '0';
 
+    -- If we need to use the active value on the PC line
     ToUsePCIn  <= '1' when ((std_match(IR, OpRJMP)) or -- and CycleCnt = "00") or
                             (std_match(IR, OpIJMP)) or -- and CycleCnt = "00") or
                             (std_match(IR, OpRCALL) and CycleCnt = "01") or
@@ -145,7 +147,7 @@ begin
                             (std_match(IR, OpBRBC)  or std_match(IR, OpBRBS))) else
                   '0';
 
-
+    -- Update PC with some complicated logic. 
     PCinternal <= (others => '0')          when (reset = '0') else
                   PC(15 downto 8) & DataDB when (CycleCnt = "01" and RetCmd) else
                   DataDB & PC(7 downto 0)  when (CycleCnt = "10" and RetCmd) else
@@ -155,6 +157,7 @@ begin
                   PCIn       when (ToUsePCIn = '1') else
                   PC;
 
+    -- Put PC asynchronously on the address bus. 
     ProgAB     <= PC;
 
 end regBehavior;
