@@ -175,6 +175,7 @@ begin
                     Status    => StatusReg,
                     ZeroLine  => result_zero,
                     clock     => clock,
+                    reset     => Reset,
                     ProgAB    => ProgAB,
                     GetNextIR => GetNextIR,
                     PC        => PC,

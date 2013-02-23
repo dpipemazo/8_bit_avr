@@ -31,6 +31,7 @@ entity  PROG  is
         Status    :  in  std_logic_vector(7 downto 0);
         ZeroLine  :  in  std_logic;
         clock     :  in  std_logic;
+        reset     :  in  std_logic;
         ProgAB    :  out std_logic_vector(15 downto 0); -- Program Address Bus (PC)
         -- ProgToWr  :  out std_logic_vector(7 downto 0);  -- Data to write to Memory
         GetNextIR :  buffer std_logic;                     -- Signal to get next IR
@@ -138,7 +139,8 @@ begin
                   '0';
 
 
-    PCinternal <= PC(15 downto 8) & DataDB when (CycleCnt = "01" and RetCmd) else
+    PCinternal <= (others => '0')          when (reset = '0') else
+                  PC(15 downto 8) & DataDB when (CycleCnt = "01" and RetCmd) else
                   DataDB & PC(7 downto 0)  when (CycleCnt = "10" and RetCmd) else
                   PCaddone   when (LastCycle = '1' or SkipCmd or GetNextIR = '1' or
                                    (CycleCnt = "00" and intrHas2Wrds)) else
