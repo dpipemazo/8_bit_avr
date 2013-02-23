@@ -110,7 +110,6 @@ entity  Memory  is
         SP          : in  std_logic_vector(15 downto 0); -- Stack Pointer
         RegA        : in  std_logic_vector(7 downto 0);  -- Register A from regs
         CycleCnt    : in  std_logic_vector(1 downto 0);  -- Cycle for instruction we're on
-        ProgDB      : in  std_logic_vector(15 downto 0); -- Constant to load from memory
         clock       : in  std_logic;
         PC          : in  std_logic_vector(15 downto 0); -- program counter
         clockedPC   : in  std_logic_vector(15 downto 0);

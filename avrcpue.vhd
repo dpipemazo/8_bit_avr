@@ -148,7 +148,6 @@ begin
                     SP => StackPointer, 
                     RegA => OperandA, 
                     CycleCnt => cycle_count, 
-                    ProgDB => ProgDB, 
                     clock => clock, 
                     PC => PC,
                     clockedPC => clockedPC,
