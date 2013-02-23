@@ -2,7 +2,14 @@
 --
 --  Atmel AVR Program Unit Definition
 --
---  This is the Atmel AVR Program Unit Definition.
+--  The program unit is responsible for the following things:
+--  1. Maintain and supply the program counter
+--  2. Latch memory constants from the Program Data Bus for 
+--      the rest of the system to use
+--  3. Tell the Control unit to fetch the next instruction from
+--      the program bus if a branch or skip wants to terminate
+--      early.
+--  4. Supply the program address bus. 
 --
 --  Revision History:
 --     12 Feb 13  Sean Keenan       Initial revision.
