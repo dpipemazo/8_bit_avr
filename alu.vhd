@@ -105,7 +105,7 @@ entity  ALU  is
         cycle_cnt :  in std_logic_vector(1 downto 0);       -- which clock cycle of a 
                                                             --  2 clock instruction we're on
                                                             --  Only matters for ADIW, MUL and SBIW
-        result_zero : buffer std_logic                         -- Internal result 0 line
+        result_zero : buffer std_logic                      -- Internal result 0 line, active high
     );
 
 end  ALU;
@@ -332,7 +332,7 @@ begin
     --
     -- ZERO FLAG
     --
-    result_zero <= OR_REDUCE(Result);
+    result_zero <= not OR_REDUCE(Result);
 
     internal_status_reg(1) <=   -- Set on a bitset
                                 '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "001") ) else
@@ -342,7 +342,7 @@ begin
 
                                 -- If all bits are 0, after the first clock of any 
                                 --  valid instruction, then this is set. 
-                                not result_zero      when (   (std_match(cycle_cnt, "00") and(
+                                result_zero           when (   (std_match(cycle_cnt, "00") and(
                                                                     std_match(IR, OpADIW) or
                                                                     std_match(IR, OpSBIW))) or
 
@@ -369,7 +369,7 @@ begin
                                 -- On the second clock of an ADIW or SBIW, 
                                 --  or the only clock of a CPC, only set if  
                                 --  the zero flag was already set.
-                                not result_zero and StatReg(1) when (
+                                result_zero and StatReg(1) when (
                                                                 std_match(IR, OpCPC) or
                                                                (std_match(cycle_cnt, "01") and(
                                                                     std_match(IR, OpADIW) or

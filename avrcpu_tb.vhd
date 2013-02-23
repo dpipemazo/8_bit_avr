@@ -386,12 +386,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     -- Do some LDIs to load registers to unequal values
                     temp_op := OpLDI;
-                    temp_op(7 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(7 downto 4) := rand_inptA(3 downto 0);
                     temp_op(11 downto 8) := "1010";
                     temp_op(3 downto 0) := "1010";
                     ProgDB <= temp_op;
                     wait for 20 ns;
-                    temp_op(7 downto 4) := rand_inptB(4 downto 0);
+                    temp_op(7 downto 4) := not rand_inptA(3 downto 0);
                     temp_op(11 downto 8) := "0101";
                     temp_op(3 downto 0) := "0101";
                     ProgDB <= temp_op;
@@ -401,14 +401,14 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- and load the next instruction
                     temp_op := OpCPSE;
                     temp_op(3 downto 0) := rand_inptA(3 downto 0);
-                    temp_op(9) := rand_inptA(4);
-                    temp_op(8 downto 4) := rand_inptB(4 downto 0);
+                    temp_op(9) := '1';
+                    temp_op(8 downto 4) := '1' & not rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
                     -- Do an LDI to load registers to equal values
                     temp_op := OpLDI;
-                    temp_op(7 downto 4) := rand_inptB(4 downto 0);
+                    temp_op(7 downto 4) := not rand_inptA(3 downto 0);
                     temp_op(11 downto 8) := "1010";
                     temp_op(3 downto 0) := "1010";
                     ProgDB <= temp_op;
@@ -418,8 +418,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- counter by 2, since the next instruction will be a LDI
                     temp_op := OpCPSE;
                     temp_op(3 downto 0) := rand_inptA(3 downto 0);
-                    temp_op(9) := rand_inptA(4);
-                    temp_op(8 downto 4) := rand_inptB(4 downto 0);
+                    temp_op(9) := '1';
+                    temp_op(8 downto 4) := '1' & not rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -431,8 +431,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- Now this CPSE should last 3 clocks
                     temp_op := OpCPSE;
                     temp_op(3 downto 0) := rand_inptA(3 downto 0);
-                    temp_op(9) := rand_inptA(4);
-                    temp_op(8 downto 4) := rand_inptB(4 downto 0);
+                    temp_op(9) := '1';
+                    temp_op(8 downto 4) := '1' & not rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -450,7 +450,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     -- First, set the bit, and make sure no skip occurs
                     temp_op := OpLDI;
-                    temp_op(7 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(7 downto 4) := rand_inptA(3 downto 0);
                     temp_op(11 downto 8) := "0010";
                     temp_op(3 downto 0) := "0000";
                     ProgDB <= temp_op;
@@ -459,13 +459,13 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- Do the skip
                     temp_op := OpSBRC;
                     temp_op(2 downto 0) := "101";
-                    temp_op(8 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
                     -- Now it should load with the bit cleared
                     temp_op := OpLDI;
-                    temp_op(7 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(7 downto 4) := rand_inptA(3 downto 0);
                     temp_op(11 downto 8) := "1101";
                     temp_op(3 downto 0) := "1111";
                     ProgDB <= temp_op;
@@ -474,7 +474,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- It should do the skip
                     temp_op := OpSBRC;
                     temp_op(2 downto 0) := "101";
-                    temp_op(8 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -493,7 +493,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     -- First, clear the bit, and make sure no skip occurs
                     temp_op := OpLDI;
-                    temp_op(7 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(7 downto 4) := rand_inptA(3 downto 0);
                     temp_op(11 downto 8) := "1111";
                     temp_op(3 downto 0) := "0111";
                     ProgDB <= temp_op;
@@ -502,13 +502,13 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- Do the skip
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
-                    temp_op(8 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
                     -- Now it should load with the bit set
                     temp_op := OpLDI;
-                    temp_op(7 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(7 downto 4) := rand_inptA(3 downto 0);
                     temp_op(11 downto 8) := "0000";
                     temp_op(3 downto 0) := "1000";
                     ProgDB <= temp_op;
@@ -517,7 +517,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- It should do the skip
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
-                    temp_op(8 downto 4) := rand_inptA(4 downto 0);
+                    temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
