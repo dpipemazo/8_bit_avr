@@ -331,15 +331,16 @@ begin
                                (std_match(CycleCnt, "00") and (
                                 std_match(IR, OpRCALL) or 
                                 std_match(IR, OpICALL))) or 
+
                                (std_match(CycleCnt, "01") and 
                                 std_match(IR, OpCALL))) else
                 PC(7 downto 0) when(
-                                std_match(CycleCnt, "10") and 
-                                std_match(IR, OpCALL)) else
-                clockedPC(7 downto 0) when(
-                                std_match(CycleCnt, "10") and (
-                                std_match(IR, OpRCALL) or
-                                std_match(IR, OpICALL))) else
+                               (std_match(CycleCnt, "01") and (
+                                std_match(IR, OpRCALL) or 
+                                std_match(IR, OpICALL))) or
+
+                               (std_match(CycleCnt, "10") and 
+                                std_match(IR, OpCALL))) else
                 (others => 'Z');
 
 --
@@ -381,13 +382,13 @@ begin
                                 std_match(IR, OpSTDY) or
                                 std_match(IR, OpSTDZ) or
                                 std_match(IR, OpPUSH) or 
-                                std_match(IR, OpCALL))) or
+                                std_match(IR, OpCALL)  or
+                                std_match(IR, OpRCALL) or
+                                std_match(IR, OpICALL))) or
                                
                                (std_match(CycleCnt, "10") and (
                                 std_match(IR, OpSTS) or
-                                std_match(IR, OpCALL) or
-                                std_match(IR, OpRCALL) or
-                                std_match(IR, OpICALL)))) else
+                                std_match(IR, OpCALL)))) else
                     '1';
 --
 -- Now assign the values of clockedRead and clockedWrite to DataRd and DataWr, 

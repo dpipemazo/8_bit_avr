@@ -269,7 +269,9 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     --
                     ProgDB <= rand_inptA & rand_inptB;
 
-                    assert ( ProgAB = std_logic_vector(unsigned(expected_pc) + 2) )
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 2);
+
+                    assert ( ProgAB = expected_pc )
                         report "Incorrect value of Program Address Bus on second clock of CALL";
 
                     assert( DataAB = expected_sp )
@@ -280,7 +282,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     assert ( DataWr = '0' )
                         report "Incorrect value on ReadWr on first write of CALL";
 
-                    assert ( DataDB = rand_inptA )
+                    assert ( DataDB = expected_pc(15 downto 8) )
                         report "Incorrect value on DataDB on first write of CALL";
 
                     wait for 10 ns;
@@ -294,7 +296,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     assert( DataAB = expected_sp )
                         report "Incorrect value on Data Address Bus on second write of CALL";
 
-                    assert ( ProgAB = std_logic_vector(unsigned(expected_pc) + 2) )
+                    assert ( ProgAB = expected_pc )
                         report "Incorrect value of Program Address Bus on third clock of CALL";
 
                     wait for 10 ns;
@@ -302,7 +304,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     assert ( DataWr = '0' )
                         report "Incorrect value on ReadWr on second write of CALL";
 
-                    assert ( DataDB = rand_inptB )
+                    assert ( DataDB = expected_pc(7 downto 0) )
                         report "Incorrect value on DataDB on second write of CALL";
 
                     wait for 10 ns;
@@ -340,7 +342,9 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     assert( DataAB = expected_sp )
                         report "Incorrect value on Data Address Bus on first write of RCALL";
 
-                    assert ( ProgAB = std_logic_vector(unsigned(expected_pc) + 1) )
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
+                    assert ( ProgAB = expected_pc )
                         report "Incorrect value of Program Address Bus on first clock of RCALL";
 
                     wait for 10 ns;
@@ -348,7 +352,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     assert ( DataWr = '0' )
                         report "Incorrect value on ReadWr on first write of RCALL";
 
-                    assert ( DataDB = rand_inptB )
+                    assert ( DataDB = expected_pc(15 downto 8) )
                         report "Incorrect value on DataDB on first write of RCALL";
 
                     wait for 10 ns;
@@ -357,49 +361,43 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- SECOND CLOCK
                     --
 
-                    wait for 20 ns;
+                    expected_sp := std_logic_vector(unsigned(expected_sp) - 1);
+
+                    assert( DataAB = expected_sp )
+                        report "Incorrect value on Data Address Bus on second write of RCALL";
+
+                    assert ( ProgAB = expected_pc )
+                        report "Incorrect value of Program Address Bus on second clock of RCALL";
+
+                    wait for 10 ns;
+
+                    assert ( DataWr = '0' )
+                        report "Incorrect value on ReadWr on second write of RCALL";
+
+                    assert ( DataDB = expected_pc(7 downto 0) )
+                        report "Incorrect value on DataDB on second write of RCALL";
+
+                    wait for 10 ns;
+
 
                     --
                     -- THIRD CLOCK
                     --
 
                     if (rand_inptB(3) = '0') then
-                        expected_pc := std_logic_vector(unsigned(expected_pc) + unsigned("0000" & rand_inptB(3 downto 0) & rand_inptA(7 downto 0)) + 1);
+                        expected_pc := std_logic_vector(unsigned(expected_pc) + unsigned("0000" & rand_inptB(3 downto 0) & rand_inptA(7 downto 0)));
                     else
-                        expected_pc := std_logic_vector(unsigned(expected_pc) + unsigned("1111" & rand_inptB(3 downto 0) & rand_inptA(7 downto 0)) + 1);
+                        expected_pc := std_logic_vector(unsigned(expected_pc) + unsigned("1111" & rand_inptB(3 downto 0) & rand_inptA(7 downto 0)));
                     end if;
 
                     assert( ProgAB = expected_pc )
                         report "Incorrect value on Program Address Bus after RCALL";
 
+
+                    -- Even though we can't check the value of SP here, assume it
+                    -- is being post-decremented as expected. The tests will fail
+                    --  on the next instruction if it is not. 
                     expected_sp := std_logic_vector(unsigned(expected_sp) - 1);
-
-                    assert( DataAB = expected_sp )
-                        report "Incorrect value on Data Address Bus on second write of RCALL";
-
-                    --
-                    -- Need to throw a 1-clock instruction in in order to be able to 
-                    -- check the values on the final half-clock of the RCALL
-                    --
-
-                    ProgDB <= OpLDI;
-
-                    -- Need to increment the program counter
-                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
-
-                    wait for 10 ns;
-
-                    assert( DataDB = rand_inptA )
-                        report "Incorrect value on DataDB on second write of RCALL";
-
-                    assert ( DataWr = '0' )
-                        report "Incorrect value on ReadWr on second write of RCALL";
-
-                    -- While we can't check this here, assume it gets post-decremented. 
-                    -- It'll mess up somewhere else if it does not. 
-                    expected_sp := std_logic_vector(unsigned(expected_sp) - 1);
-
-                    wait for 10 ns;
 
                 --
                 -- INSTRUCTION: ICALL
@@ -413,15 +411,19 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op(3 downto 0) := rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     temp_op(7 downto 4) := "1111";
                     temp_op(11 downto 8) := rand_inptB(7 downto 4);
                     temp_op(3 downto 0) := rand_inptB(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     ProgDB <= OpICALL;
                     wait for 20 ns;
-                    ProgDB <= rand_inptB & rand_inptA;
 
                     --
                     -- FIRST CLOCK
@@ -432,7 +434,9 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     assert( DataAB = expected_sp )
                         report "Incorrect value on Data Address Bus on first write of ICALL";
 
-                    assert ( ProgAB = std_logic_vector(unsigned(expected_pc) + 3) )
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
+                    assert ( ProgAB = expected_pc )
                         report "Incorrect value of Program Address Bus on first clock of ICALL";
 
                     wait for 10 ns;
@@ -440,7 +444,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     assert ( DataWr = '0' )
                         report "Incorrect value on ReadWr on first write of ICALL";
 
-                    assert ( DataDB = rand_inptB )
+                    assert ( DataDB = expected_pc(15 downto 8) )
                         report "Incorrect value on DataDB on first write of ICALL";
 
                     wait for 10 ns;
@@ -449,7 +453,23 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- SECOND CLOCK
                     --
 
-                    wait for 20 ns;
+                    expected_sp := std_logic_vector(unsigned(expected_sp) - 1);
+
+                    assert( DataAB = expected_sp )
+                        report "Incorrect value on Data Address Bus on second write of ICALL";
+
+                    assert ( ProgAB = expected_pc )
+                        report "Incorrect value of Program Address Bus on second clock of ICALL";
+
+                    wait for 10 ns;
+
+                    assert ( DataWr = '0' )
+                        report "Incorrect value on ReadWr on second write of ICALL";
+
+                    assert ( DataDB = expected_pc(7 downto 0) )
+                        report "Incorrect value on DataDB on second write of ICALL";
+
+                    wait for 10 ns;
 
                     --
                     -- THIRD CLOCK
@@ -460,35 +480,11 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     assert( ProgAB = expected_pc )
                         report "Incorrect value on Program Address Bus after ICALL";
 
+                    -- Even though we can't check SP here, assume it post-decrements
+                    --  like it should. If not, it'll fail somewhere else in the
+                    --  test.
                     expected_sp := std_logic_vector(unsigned(expected_sp) - 1);
 
-                    assert( DataAB = expected_sp )
-                        report "Incorrect value on Data Address Bus on second write of ICALL";
-
-                    --
-                    -- Need to throw a 1-clock instruction in in order to be able to 
-                    -- check the values on the final half-clock of the RCALL
-                    --
-
-                    ProgDB <= OpLDI;
-
-                    -- Need to increment the program counter
-                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
-
-                    wait for 10 ns;
-
-
-                    assert( DataDB = rand_inptA )
-                        report "Incorrect value on DataDB on second write of ICALL";
-
-                    assert ( DataWr = '0' )
-                        report "Incorrect value on ReadWr on second write of ICALL";
-
-                    -- While we can't check this here, assume it gets post-decremented. 
-                    -- It'll mess up somewhere else if it does not. 
-                    expected_sp := std_logic_vector(unsigned(expected_sp) - 1);
-
-                    wait for 10 ns;
 
                 --
                 -- INSTRUCTION: RET
