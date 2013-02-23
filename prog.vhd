@@ -34,7 +34,8 @@ entity  PROG  is
         ProgAB    :  out std_logic_vector(15 downto 0); -- Program Address Bus (PC)
         -- ProgToWr  :  out std_logic_vector(7 downto 0);  -- Data to write to Memory
         GetNextIR :  buffer std_logic;                     -- Signal to get next IR
-        PC        :  buffer std_logic_vector(15 downto 0) -- PC for other entities to use
+        PC        :  buffer std_logic_vector(15 downto 0); -- PC for other entities to use
+        constantPC:  buffer std_logic_vector(15 downto 0)
     );
 
 end  PROG;
@@ -54,8 +55,6 @@ architecture regBehavior of PROG is
     signal  isBitSet        :  boolean;
 
     signal  UseConstPC      :  std_logic;
-
-    signal  constantPC      :  std_logic_vector(15 downto 0);
 
     -- signal  bitMask         :  std_logic_vector(15 downto 0);
 	 

@@ -136,9 +136,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
         --
         ProgDB <= OpADD;
         reset <= '0';
-        wait for 20 ns;
+        wait for 11 ns;
         reset <= '1';
-        wait for 9 ns;
 
         -- Loop forever
         while ( END_SIM = FALSE ) loop
@@ -218,9 +217,10 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                 elsif (op = OP_CALL) then
                     ProgDB <= OpCALL;
-                    wait for 22 ns;
+                    wait for 20 ns;
                     ProgDB <= rand_inptB & rand_inptA;
-                    wait for 18 ns;
+                    wait for 20 ns;
+                    ProgDB <= rand_inptA & rand_inptB;
                     wait for 20 ns;
                     wait for 20 ns;
 
@@ -233,6 +233,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op(11 downto 0) := rand_inptB(3 downto 0) & rand_inptA(7 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
+                    ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
                     wait for 20 ns;
 
@@ -256,6 +257,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     ProgDB <= OpICALL;
                     wait for 20 ns;
+                    ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
                     wait for 20 ns;
 
@@ -268,7 +270,9 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= OpRET;
                     wait for 20 ns;
                     wait for 20 ns;
+                    DataDB <= rand_inptA;
                     wait for 20 ns;
+                    DataDB <= rand_inptB;
                     wait for 20 ns;
 
                 --
@@ -279,7 +283,9 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= OpRETI;
                     wait for 20 ns;
                     wait for 20 ns;
+                    DataDB <= rand_inptA;
                     wait for 20 ns;
+                    DataDB <= rand_inptB;
                     wait for 20 ns;
 
                 --
@@ -303,7 +309,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- on this BRBC
                     temp_op := OpBRBC;
                     temp_op(2 downto 0) := rand_inptA(2 downto 0);
-                    temp_op(9 downto 3) := rand_inptB(7 downto 0);
+                    temp_op(9 downto 3) := rand_inptB(6 downto 0);
                     ProgDB <= temp_op;
 
                     -- wait for 40 ns to make sure it doesn't branch
@@ -318,12 +324,9 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     -- And do another BRBC, and PC should update to 
                     -- add B value to it
-
-                    -- Now the bit is set, so PC should not change
-                    -- on this BRBC
                     temp_op := OpBRBC;
                     temp_op(2 downto 0) := rand_inptA(2 downto 0);
-                    temp_op(9 downto 3) := rand_inptB(7 downto 0);
+                    temp_op(9 downto 3) := rand_inptB(6 downto 0);
                     ProgDB <= temp_op;
 
                     wait for 20 ns;
@@ -350,7 +353,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- on this BRBC
                     temp_op := OpBRBS;
                     temp_op(2 downto 0) := rand_inptA(2 downto 0);
-                    temp_op(9 downto 3) := rand_inptB(7 downto 0);
+                    temp_op(9 downto 3) := rand_inptB(6 downto 0);
                     ProgDB <= temp_op;
 
                     -- wait for 40 ns to make sure it doesn't branch
@@ -370,7 +373,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- on this BRBC
                     temp_op := OpBRBS;
                     temp_op(2 downto 0) := rand_inptA(2 downto 0);
-                    temp_op(9 downto 3) := rand_inptB(7 downto 0);
+                    temp_op(9 downto 3) := rand_inptB(6 downto 0);
                     ProgDB <= temp_op;
 
                     wait for 20 ns;

@@ -113,6 +113,7 @@ entity  Memory  is
         ProgDB      : in  std_logic_vector(15 downto 0); -- Constant to load from memory
         clock       : in  std_logic;
         PC          : in  std_logic_vector(15 downto 0); -- program counter
+        clockedPC   : in  std_logic_vector(15 downto 0);
         -- Dealing with memory
         DataDB      : out std_logic_vector(7 downto 0);-- Memory Data Bus
         AddrB       : out std_logic_vector(15 downto 0); -- Address Bus
@@ -183,20 +184,24 @@ begin
                 '0';
 
     -- When to write the SP register
-    writeSP <= '1' when(   (std_match(CycleCnt, "01") and (
-                            std_match(IR, OpPUSH) or 
-                            std_match(IR, OpPOP) )) or
-
-                          ((std_match(CycleCnt, "00") or
-                            std_match(CycleCnt, "10")) and (
+    writeSP <= '1' when(  (std_match(CycleCnt, "00") and (
                             std_match(IR, OpRCALL) or
                             std_match(IR, OpICALL) or 
                             std_match(IR, OpRET) or
-                            std_match(IR, OpRETI))) ) or
+                            std_match(IR, OpRETI) ) ) or
 
-                          ((std_match(CycleCnt, "01") or
-                            std_match(CycleCnt, "10")) and (
-                            std_match(IR, OpCALL))) else
+                          (std_match(CycleCnt, "01") and (
+                            std_match(IR, OpPUSH) or 
+                            std_match(IR, OpPOP) or
+                            std_match(IR, OpRET) or
+                            std_match(IR, OpRETI) or
+                            std_match(IR, OpCALL) ) ) or
+
+                          (std_match(CycleCnt, "10") and (
+                            std_match(IR, OpRCALL) or
+                            std_match(IR, OpICALL) or
+                            std_match(IR, OpCALL) ) ) ) else
+
                 '0';
 
 --
@@ -330,10 +335,12 @@ begin
                                (std_match(CycleCnt, "01") and 
                                 std_match(IR, OpCALL))) else
                 ProgDB(7 downto 0) when(
+                                std_match(CycleCnt, "10") and 
+                                std_match(IR, OpCALL)) else
+                clockedPC(7 downto 0) when(
                                 std_match(CycleCnt, "10") and (
                                 std_match(IR, OpRCALL) or
-                                std_match(IR, OpICALL) or
-                                std_match(IR, OpCALL))) else
+                                std_match(IR, OpICALL))) else
                 (others => 'Z');
 
 --

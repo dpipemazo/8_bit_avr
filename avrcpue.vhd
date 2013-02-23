@@ -90,6 +90,7 @@ signal PC : std_logic_vector(15 downto 0); -- program counter
 signal GetNextIR : std_logic;
 signal lastCycle : std_logic;
 signal result_zero : std_logic;
+signal clockedPC : std_logic_vector(15 downto 0);
 
 begin
 
@@ -150,6 +151,7 @@ begin
                     ProgDB => ProgDB, 
                     clock => clock, 
                     PC => PC,
+                    clockedPC => clockedPC,
                     DataDB => DataDB, 
                     AddrB => DataAB, 
                     DataRd => DataRd, 
@@ -175,7 +177,8 @@ begin
                     clock     => clock,
                     ProgAB    => ProgAB,
                     GetNextIR => GetNextIR,
-                    PC        => PC
+                    PC        => PC,
+                    constantPC => clockedPC
                 );
 
     DataWr <= writeData;
