@@ -77,7 +77,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
     -- Constants
 
 
-    constant SimpleReadsSize : integer := 81;
+    constant SimpleReadsSize : integer := 82;
 
     type SIMPLE_READS_TYPE is array (0 to SimpleReadsSize) of std_logic_vector(7 downto 0);
 
@@ -85,7 +85,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
       X"FF", X"00", X"00", X"FF", X"FE", -- ADC command
       X"7D", X"FF", X"00", X"00",        -- ADD command
       X"45", X"7D", X"00", X"00",        -- ADIW command
-      X"55", X"00", X"80",               -- AND command
+      X"55", X"00", X"00",               -- AND command
       X"55", X"FF", X"AA",               -- ANDI command
       X"FF", X"00", X"38", X"D5",        -- ASR command
       X"00", X"FF", X"AA", X"55",        -- ST command
@@ -109,7 +109,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
     constant SimpleAddrSize : integer := 25;
 
-    type SIMPLE_ADDR_TYPE is array (0 to SimpleAddrSize) of std_logic_vector(7 downto 0);
+    type SIMPLE_ADDR_TYPE is array (0 to SimpleAddrSize) of std_logic_vector(15 downto 0);
 
     constant SimpleAddrArray : SIMPLE_ADDR_TYPE := (
       X"5555", X"AAAA",                                     
@@ -123,7 +123,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
     constant SimpleLoadSize : integer := 13;
 
-    type SIMPLE_LOAD_TYPE is array (0 to SimpleLoadSize) of std_logic_vector(7 downto 0);
+    type SIMPLE_LOAD_TYPE is array (0 to SimpleLoadSize) of std_logic_vector(15 downto 0);
 
     constant SimpleLoadArray : SIMPLE_LOAD_TYPE := (
       X"AAAA", X"5555",                     -- LDS
@@ -132,7 +132,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
       X"FFC0", X"FFC1", X"FFC0", X"FFFC"    -- LD/LDD
     );
 
-    constant SimpleJmpSize : integer := 13;
+    constant SimpleJmpSize : integer := 18;
 
     type SIMPLE_JMP_TYPE is array (0 to SimpleJmpSize) of std_logic_vector(7 downto 0);
 
@@ -167,10 +167,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
             DataDB => DataDB
     );
 
-    ROM : prog_memory port map (
+    ROM : entity PROG_MEMORY 
+	     port map(
             ProgAB => ProgAB,
             Reset  => Reset,
-            ProgDB => ProgDB);
+            ProgDB => ProgDB
+	 );
 
     -- Make the interrupt lines high
     INT0 <= '1';
@@ -188,7 +190,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
         --
         -- Reset the system, to get it into the correct state
         --
-        ProgDB <= OpADD;
+        ProgDB <= (others => 'Z');
+		  DataAB <= (others => 'Z');
         reset <= '0';
         wait for 11 ns;
         reset <= '1';
@@ -202,14 +205,14 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
         end loop;
 
         for a in 0 to SimpleAddrSize loop
-            wait until (DataWr = '0')
+            wait until (DataWr = '0');
             assert (DataAB = SimpleAddrArray(a))
             report "Failed a Store command"
             severity ERROR;
             wait for 12 ns;
         end loop;
 
-        wait 8 ns;
+        wait for  8 ns;
 
         wait for 120 ns;
 
@@ -233,6 +236,10 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
             wait for 12 ns;
         end loop;
 
+    -- Finished Simulation
+    END_SIM <= TRUE;
+    wait;
+    
     end process;
 
     -- MAKE THE CLOCK

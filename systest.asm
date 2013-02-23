@@ -138,8 +138,10 @@ Start:					; start of the test code
 	ST 	X, R17			; Check Store = 55
 	AND	R17, R29		; 55  AA  00  11000011
 	ST 	X, R17			; Check Store = 00
-	AND	R0, R31			; 80  3F  80  11010101
-	ST 	X, R0			; Check Store = 80
+	AND	R0, R31			; 80  3F  00  11010101
+	ST 	X, R0			; Check Store = 00
+	BLD	R0, 7			; 00  XX  80  11111111
+	
 
 					;OpA OpB Res    Flags
 	ANDI	R28, 0xFF		; 55  FF  55  11000001
