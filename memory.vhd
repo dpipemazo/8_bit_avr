@@ -232,14 +232,14 @@ begin
                                         std_match(IR, OpSTYD) or
                                         std_match(IR, OpSTZD) or
                                         std_match(IR, OpCALL) or
-                                        std_match(IR, OpICALL) or
 
                                        (std_match(CycleCnt, "01") and
                                         std_match(IR, OpPUSH)) or
 
                                       ((std_match(CycleCnt, "00") or
-                                        std_match(CycleCnt, "10")) and 
-                                        std_match(IR, OpRCALL))) else
+                                        std_match(CycleCnt, "10")) and (
+                                        std_match(IR, OpRCALL) or
+                                        std_match(IR, OpICALL) ) ) ) else
 
                 "0000000000000001" when(std_match(IR, OpPOP) or 
                                         std_match(IR, OpRET) or
