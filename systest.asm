@@ -508,7 +508,7 @@ Branch5:
 	BST	R30, 1			; set the T flag
 	BRTC	TestBranches		; so should not branch
 	BST	R30, 3			; now clear the T flag
-	BRTS	TestBranches		; and still should not branch
+	BRTS	Branch5 		; and still should not branch
 	ADD	R30, R30		; R30 is now 0xCC (no carry)
 	BRSH	Branch6			; so should take the branch
 	JMP	TestBranches
@@ -516,7 +516,7 @@ Branch6:
 	LDI	R16, 0xB8
 	ST  	X, R16			; 17) Check Store = B8
 	ADD	R30, R30		; should set the carry and half carry
-	BRSH	TestBranches		; should not take branch
+	BRSH	Branch5 		; should not take branch
 	BRHS	TestSkips		; but should take this one
 	LDI	R16, 0xF6
 	ST  	X, R16			; X) Fail if we read this (F6)

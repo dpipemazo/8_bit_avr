@@ -138,7 +138,8 @@ begin
                   '0';
 
 
-    PCinternal <= PC(15 downto 8) & DataDB when (CycleCnt = "01" and RetCmd) else
+    PCinternal <= (others => '0')          when (reset = '0') else
+                  PC(15 downto 8) & DataDB when (CycleCnt = "01" and RetCmd) else
                   DataDB & PC(7 downto 0)  when (CycleCnt = "10" and RetCmd) else
                   PCaddone   when (LastCycle = '1' or SkipCmd or GetNextIR = '1' or
                                    (CycleCnt = "00" and intrHas2Wrds)) else
