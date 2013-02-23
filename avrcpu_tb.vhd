@@ -2,6 +2,14 @@
 --
 --  AVR CPU TEST BENCH
 --
+-- This test bench exhaustively tests every instruction 
+--  implemented in HW5 with random inputs. It will infinitely
+--  loop over the instructions created, and will test them 
+--  with random inputs. This test bench tests all address
+--  buses, data buses, and internal signals where appropriate.
+--
+--  REVISION HISTORY
+--      2/23/13 Dan Pipe-Mazo   Initial Revision
 ---------------------------------------------------------
 
 --

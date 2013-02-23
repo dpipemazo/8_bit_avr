@@ -292,7 +292,7 @@ begin
 
             -- Use the program data bus for STS and LDS
             if (std_match(CycleCnt, "01") and (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
-                    latchedAddr <= ProgDB;
+                    latchedAddr <= clockedPC;
             end if;
         end if;
     end process;
