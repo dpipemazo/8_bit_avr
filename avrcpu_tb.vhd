@@ -490,12 +490,55 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     ProgDB <= OpRET;
                     wait for 20 ns;
+
+                    --
+                    -- FIRST CLOCK
+                    --
+
                     wait for 20 ns;
+
+                    --
+                    -- SECOND CLOCK
+                    --
                     DataDB <= rand_inptA;
-                    wait for 20 ns;
+                    expected_sp := std_logic_vector(unsigned(expected_sp) + 1);
+
+                    assert( DataAB = expected_sp )
+                        report "Incorrect value on Data Address Bus on first write of RET";
+
+                    wait for 10 ns;
+
+                    assert ( DataRd = '0' )
+                        report "Incorrect value on ReadWr on first write of RET";
+
+                    wait for 10 ns;
+
+                    --
+                    -- THIRD CLOCK
+                    --
                     DataDB <= rand_inptB;
-                    wait for 20 ns;
+                    expected_sp := std_logic_vector(unsigned(expected_sp) + 1);
+
+                    assert( DataAB = expected_sp )
+                        report "Incorrect value on Data Address Bus on second write of RET";
+
+                    wait for 10 ns;
+
+                    assert ( DataRd = '0' )
+                        report "Incorrect value on ReadWr on second write of RET";
+
+                    wait for 10 ns;
                     DataDB <= (others => 'Z');
+
+                    --
+                    -- FOURTH CLOCK
+                    --
+
+                    expected_pc := rand_inptB & rand_inptA;
+
+                    assert( ProgAB = expected_pc )
+                        report "Incorrect value on Program Address Bus after RET";
+
 
                 --
                 -- INSTRUCTION: RETI
@@ -504,12 +547,66 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     ProgDB <= OpRETI;
                     wait for 20 ns;
+
+                    --
+                    -- FIRST CLOCK
+                    --
+
                     wait for 20 ns;
+
+                    --
+                    -- SECOND CLOCK
+                    --
                     DataDB <= rand_inptA;
-                    wait for 20 ns;
+                    expected_sp := std_logic_vector(unsigned(expected_sp) + 1);
+
+                    assert( DataAB = expected_sp )
+                        report "Incorrect value on Data Address Bus on first write of RETI";
+
+                    wait for 10 ns;
+
+                    assert ( DataRd = '0' )
+                        report "Incorrect value on ReadWr on first write of RETI";
+
+                    wait for 10 ns;
+
+                    --
+                    -- THIRD CLOCK
+                    --
                     DataDB <= rand_inptB;
-                    wait for 20 ns;
+                    expected_sp := std_logic_vector(unsigned(expected_sp) + 1);
+
+                    assert( DataAB = expected_sp )
+                        report "Incorrect value on Data Address Bus on second write of RETI";
+
+                    wait for 10 ns;
+
+                    assert ( DataRd = '0' )
+                        report "Incorrect value on ReadWr on second write of RETI";
+
+                    wait for 10 ns;
                     DataDB <= (others => 'Z');
+
+                    --
+                    -- FOURTH CLOCK
+                    --
+
+                    expected_pc := rand_inptB & rand_inptA;
+
+                    assert( ProgAB = expected_pc )
+                        report "Incorrect value on Program Address Bus after RETI";
+
+                    -- Now, need to check that the IRET occurred
+                    temp_op := OpBRBS;
+                    temp_op(2 downto 0) := "111";
+                    temp_op(9 downto 3) := rand_inptB(6 downto 0);
+                    ProgDB <= temp_op;
+                    wait for 40 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + unsigned(rand_inptB(6 downto 0)) + 1);
+
+                    assert( ProgAB = expected_pc )
+                        report "RETI did not set interrupt bit correctly";                    
 
                 --
                 -- INSTRUCTION: BRBC
@@ -528,6 +625,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- Now the bit is set, so PC should not change
                     -- on this BRBC
                     temp_op := OpBRBC;
@@ -539,11 +638,19 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     wait for 20 ns;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 2);
+
+                    assert( ProgAB = expected_pc )
+                        report "BRBC test failure. Branched when it should not have";
+
+
                     -- Now clear the bit
                     temp_op := OpBCLR;
                     temp_op(6 downto 4) := rand_inptA(2 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
                     -- And do another BRBC, and PC should update to 
                     -- add B value to it
@@ -554,6 +661,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     wait for 20 ns;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + unsigned(rand_inptB(6 downto 0)) + 1);
+
+                    assert( ProgAB = expected_pc )
+                        report "BRBC test failure. Did not branch when it should have";
+
 
                 --
                 -- INSTRUCTION: BRBS
@@ -572,6 +685,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- Now the bit is set, so PC should not change
                     -- on this BRBC
                     temp_op := OpBRBS;
@@ -583,16 +698,21 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     wait for 20 ns;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 2);
+
+                    assert( ProgAB = expected_pc )
+                        report "BRBS test failure. Branched when it should not have";
+
                     -- Now clear the bit
                     temp_op := OpBSET;
                     temp_op(6 downto 4) := rand_inptA(2 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
-                    -- And do another BRBC, and PC should update to 
-                    -- add B value to it
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
-                    -- Now the bit is set, so PC should not change
+
+                    -- Now the bit is set, so PC should change
                     -- on this BRBC
                     temp_op := OpBRBS;
                     temp_op(2 downto 0) := rand_inptA(2 downto 0);
@@ -601,6 +721,11 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     wait for 20 ns;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + unsigned(rand_inptB(6 downto 0)) + 1);
+
+                    assert( ProgAB = expected_pc )
+                        report "BRBS test failure. Did not branch when it should have";
 
                 --
                 -- INSTRUCTION: CPSE
@@ -614,11 +739,16 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op(3 downto 0) := "1010";
                     ProgDB <= temp_op;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     temp_op(7 downto 4) := not rand_inptA(3 downto 0);
                     temp_op(11 downto 8) := "0101";
                     temp_op(3 downto 0) := "0101";
                     ProgDB <= temp_op;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
                     -- Now, do a CPSE, and it should just increment PC by 1
                     -- and load the next instruction
@@ -629,6 +759,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- Do an LDI to load registers to equal values
                     temp_op := OpLDI;
                     temp_op(7 downto 4) := not rand_inptA(3 downto 0);
@@ -636,6 +768,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op(3 downto 0) := "1010";
                     ProgDB <= temp_op;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
                     -- Now, do a CPSE and it should increment the program 
                     -- counter by 2, since the next instruction will be a LDI
@@ -646,10 +780,14 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- IR should not be updated, and this CPSE should 
                     -- last 2 clocks
-                    ProgDB <= OpLDI;
+                    ProgDB <= OpRET;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
                     -- Now this CPSE should last 3 clocks
                     temp_op := OpCPSE;
@@ -659,12 +797,34 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
+                    -- Here, the program counter would not increment if the RET
+                    -- was not skipped, since RET is a 4 clock instruction usually
+                    assert( ProgAB = expected_pc ) report
+                        "CPSE Failure. Did not skip instruction on equal";
+
                     -- IR should not be updated, and this CPSE should 
                     -- last 2 clocks
                     ProgDB <= OpCALL;
                     wait for 20 ns;
                     ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
+
+                    --
+                    -- Need an extra instruction to make sure the skip occurred
+                    --  properly
+                    --
+                    ProgDB <= OpLDI;
+                    wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 3);
+
+                    -- Here, the program counter would not increment if the CALL
+                    -- was not skipped, since CALL is a 4 clock instruction usually
+                    assert( ProgAB = expected_pc ) report
+                        "CPSE Failure. Did not skip double-instruction on equal";
+
 
                 --
                 -- INSTRUCTION: SBRC
@@ -679,12 +839,16 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- Do the skip
                     temp_op := OpSBRC;
                     temp_op(2 downto 0) := "101";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
                     -- Now it should load with the bit cleared
                     temp_op := OpLDI;
@@ -694,6 +858,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- It should do the skip
                     temp_op := OpSBRC;
                     temp_op(2 downto 0) := "101";
@@ -701,9 +867,13 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- This should be skipped
-                    ProgDB <= OpADD;
+                    ProgDB <= OpRET;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
                     temp_op := OpSBRC;
                     temp_op(2 downto 0) := "101";
@@ -711,11 +881,32 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
+                    -- Here, the program counter would not increment if the RET
+                    -- was not skipped, since RET is a 4 clock instruction usually
+                    assert( ProgAB = expected_pc ) report
+                        "SBRC Failure. Did not skip instruction on equal";
+
                     -- This should also be skipped, but over 2 clocks
                     ProgDB <= OpJMP;
                     wait for 20 ns;
                     ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
+
+                    --
+                    -- Need an extra instruction to make sure the skip occurred
+                    --  properly
+                    --
+                    ProgDB <= OpLDI;
+                    wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 3);
+
+                    -- Here, the program counter would not increment if the JMP
+                    -- was not skipped, since JMP is a 3 clock instruction usually
+                    assert( ProgAB = expected_pc ) report
+                        "SBRC Failure. Did not skip double-instruction on equal";
 
                 --
                 -- INSTRUCTION: SBRS
@@ -730,12 +921,16 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- Do the skip
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
                     ProgDB <= temp_op;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
                     -- Now it should load with the bit set
                     temp_op := OpLDI;
@@ -745,6 +940,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- It should do the skip
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
@@ -752,9 +949,13 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     -- This should be skipped
                     ProgDB <= OpADD;
                     wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
@@ -762,11 +963,32 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
+                    -- Here, the program counter would not increment if the RET
+                    -- was not skipped, since RET is a 4 clock instruction usually
+                    assert( ProgAB = expected_pc ) report
+                        "SBRS Failure. Did not skip instruction on equal";
+
                     -- This should also be skipped, but over 2 clocks
                     ProgDB <= OpLDS;
                     wait for 20 ns;
                     ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
+
+                    --
+                    -- Need an extra instruction to make sure the skip occurred
+                    --  properly
+                    --
+                    ProgDB <= OpLDI;
+                    wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 3);
+
+                    -- Here, the program counter would not increment if the LDS
+                    -- was not skipped, since LDS is a 3 clock instruction usually
+                    assert( ProgAB = expected_pc ) report
+                        "SBRS Failure. Did not skip double-instruction on equal";
 
                     -- Just to make sure we catch the final edge case
                     -- where we need to skip two clocks
@@ -777,10 +999,26 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
+
                     ProgDB <= OpSTS;
                     wait for 20 ns;
                     ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
+
+                    --
+                    -- Need an extra instruction to make sure the skip occurred
+                    --  properly
+                    --
+                    ProgDB <= OpLDI;
+                    wait for 20 ns;
+
+                    expected_pc := std_logic_vector(unsigned(expected_pc) + 3);
+
+                    -- Here, the program counter would not increment if the STS
+                    -- was not skipped, since STS is a 3 clock instruction usually
+                    assert( ProgAB = expected_pc ) report
+                        "SBRS Failure. Did not skip double-instruction on equal";
 
                 end if;
             end loop;
