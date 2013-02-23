@@ -8,6 +8,12 @@
 --  with random inputs. This test bench tests all address
 --  buses, data buses, and internal signals where appropriate.
 --
+-- This test will output a few metavalue warnings at 0 and 10 ns 
+--  when some initialization is going on, but should not output
+--  anthing at all after that point if all tests are passing. If
+--  metavalue warnings or failure messages come out past 10 ns, 
+--  something is wrong with the AVR CPU code. 
+--
 --  REVISION HISTORY
 --      2/23/13 Dan Pipe-Mazo   Initial Revision
 ---------------------------------------------------------
@@ -145,7 +151,10 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
         --
         DataDB <= (others => 'Z');
 
+        -- get a valid instruction into IR, and let the reset propogate. 
         ProgDB <= OpADD;
+        ProgDB(9 downto 0) <= (others => '0');
+
         reset <= '0';
         wait for 11 ns;
         reset <= '1';
@@ -237,7 +246,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     -- Now that Z is loaded and equals rand_inptB | rand_inptA
                     -- we can do the IJMP
-                    ProgDB <= OpIJMP;
+
+                    -- Get rid of metavalue errors
+                    temp_op := OpIJMP;
+                    temp_op(7 downto 4) := (others => '0');
+
+                    ProgDB <= temp_op;
                     wait for 20 ns;
                     wait for 20 ns;
 
@@ -251,7 +265,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                 --
 
                 elsif (op = OP_CALL) then
-                    ProgDB <= OpCALL;
+                    -- Fix silly metavalue errors
+                    temp_op := OpCALL;
+                    temp_op(8 downto 4) := (others => '0');
+                    temp_op(0) := '0';
+
+                    ProgDB <= temp_op;
                     wait for 20 ns;
 
                     --
@@ -422,7 +441,11 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     expected_pc := std_logic_vector(unsigned(expected_pc) + 1);
 
-                    ProgDB <= OpICALL;
+                    -- Get rid of metavalue errors
+                    temp_op := OpICALL;
+                    temp_op(7 downto 4) := (others => '0');
+
+                    ProgDB <= temp_op;
                     wait for 20 ns;
 
                     --
@@ -492,7 +515,11 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                 elsif( op = OP_RET ) then
 
-                    ProgDB <= OpRET;
+                    -- Get rid of metavalue errors
+                    temp_op := OpRET;
+                    temp_op(6 downto 5) := (others => '0');
+
+                    ProgDB <= temp_op;
                     wait for 20 ns;
 
                     --
@@ -549,7 +576,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                 --
                 elsif( op = OP_RETI ) then
 
-                    ProgDB <= OpRETI;
+                    -- Get rid of metavalue errors
+                    temp_op := OpRETI;
+                    temp_op(6 downto 5) := (others => '0');
+
+                    ProgDB <= temp_op;
+
                     wait for 20 ns;
 
                     --
@@ -819,7 +851,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- Need an extra instruction to make sure the skip occurred
                     --  properly
                     --
-                    ProgDB <= OpLDI;
+
+                    -- Get rid of metavalue errors
+                    temp_op := OpLDI;
+                    temp_op(11 downto 0) := (others => '0');
+
+                    ProgDB <= temp_op;
                     wait for 20 ns;
 
                     expected_pc := std_logic_vector(unsigned(expected_pc) + 3);
@@ -849,6 +886,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op := OpSBRC;
                     temp_op(2 downto 0) := "101";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    temp_op(3) := '0';
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -868,6 +906,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op := OpSBRC;
                     temp_op(2 downto 0) := "101";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    temp_op(3) := '0';
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -882,6 +921,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op := OpSBRC;
                     temp_op(2 downto 0) := "101";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    temp_op(3) := '0';
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -902,7 +942,10 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- Need an extra instruction to make sure the skip occurred
                     --  properly
                     --
-                    ProgDB <= OpLDI;
+                    temp_op := OpLDI;
+                    temp_op(11 downto 0) := (others => '0');
+
+                    ProgDB <= temp_op;
                     wait for 20 ns;
 
                     expected_pc := std_logic_vector(unsigned(expected_pc) + 3);
@@ -931,6 +974,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    temp_op(3) := '0';
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -950,6 +994,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    temp_op(3) := '0';
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -964,6 +1009,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    temp_op(3) := '0';
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -982,9 +1028,15 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     --
                     -- Need an extra instruction to make sure the skip occurred
-                    --  properly
+                    --  properly. Need to be careful not to trash the register
+                    --  which we are using for the SBRS though. 
                     --
-                    ProgDB <= OpLDI;
+                    temp_op := OpLDI;
+                    temp_op(11 downto 8) := (others => '0');
+                    temp_op(7 downto 4) := not rand_inptA(3 downto 0);
+                    temp_op(3 downto 0) := (others => '0');
+
+                    ProgDB <= temp_op;
                     wait for 20 ns;
 
                     expected_pc := std_logic_vector(unsigned(expected_pc) + 3);
@@ -992,7 +1044,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- Here, the program counter would not increment if the LDS
                     -- was not skipped, since LDS is a 3 clock instruction usually
                     assert( ProgAB = expected_pc ) report
-                        "SBRS Failure. Did not skip double-instruction on equal";
+                        "SBRS Failure. Did not skip double-instruction on equal 1";
 
                     -- Just to make sure we catch the final edge case
                     -- where we need to skip two clocks
@@ -1000,6 +1052,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     temp_op := OpSBRS;
                     temp_op(2 downto 0) := "011";
                     temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    temp_op(3) := '0';
                     ProgDB <= temp_op;
                     wait for 20 ns;
 
@@ -1014,7 +1067,10 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- Need an extra instruction to make sure the skip occurred
                     --  properly
                     --
-                    ProgDB <= OpLDI;
+                    temp_op := OpLDI;
+                    temp_op(11 downto 0) := (others => '0');
+
+                    ProgDB <= temp_op;
                     wait for 20 ns;
 
                     expected_pc := std_logic_vector(unsigned(expected_pc) + 3);
@@ -1022,7 +1078,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     -- Here, the program counter would not increment if the STS
                     -- was not skipped, since STS is a 3 clock instruction usually
                     assert( ProgAB = expected_pc ) report
-                        "SBRS Failure. Did not skip double-instruction on equal";
+                        "SBRS Failure. Did not skip double-instruction on equal 2";
 
                 end if;
             end loop;
