@@ -128,6 +128,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
         variable check_bit : std_logic;
         variable stat_lp : integer;
         variable prev_zero : std_logic;
+        variable curr_pc : std_logic_vector(15 downto 0);
 
     begin
 
@@ -173,7 +174,11 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     wait for 20 ns;
                     ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
+                    ProgDB <= rand_inptA & rand_inptB;
                     wait for 20 ns;
+
+                    assert( ProgAB = (rand_inptB & rand_inptA) )
+                        report " Incorrect value on Program Address Bus after Jump";
 
                 --
                 -- INSTRUCTION: RJMP
