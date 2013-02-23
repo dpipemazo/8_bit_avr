@@ -328,13 +328,13 @@ begin
                                 std_match(IR, OpPUSH))) or 
                                (std_match(CycleCnt, "10") and
                                 std_match(IR, OpSTS) ) ) else
-                ProgDB(15 downto 8) when( 
+                PC(15 downto 8) when( 
                                (std_match(CycleCnt, "00") and (
                                 std_match(IR, OpRCALL) or 
                                 std_match(IR, OpICALL))) or 
                                (std_match(CycleCnt, "01") and 
                                 std_match(IR, OpCALL))) else
-                ProgDB(7 downto 0) when(
+                PC(7 downto 0) when(
                                 std_match(CycleCnt, "10") and 
                                 std_match(IR, OpCALL)) else
                 clockedPC(7 downto 0) when(
