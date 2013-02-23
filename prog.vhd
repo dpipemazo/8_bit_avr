@@ -111,7 +111,7 @@ begin
                     Registers;
 
 
-    internalIR <= ProgDB when (SkipCmd) else
+    internalIR <= constantPC when (SkipCmd) else
                   IR;
 
 
