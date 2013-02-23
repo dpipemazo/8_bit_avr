@@ -275,7 +275,8 @@ begin
                                             std_match(IR, OpCPI)  or
                                             std_match(IR, OpSBCI) or
                                             std_match(IR, OpCOM)  or 
-                                            std_match(IR, OpLDI)) else
+                                            std_match(IR, OpLDI)  or 
+                                            std_match(IR, OpCPSE)) else
                        shift_result when(   std_match(IR, OpROR)  or
                                             std_match(IR, OpASR)  or
                                             std_match(IR, OpLSR)) else
