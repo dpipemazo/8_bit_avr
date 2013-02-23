@@ -438,7 +438,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
                     -- IR should not be updated, and this CPSE should 
                     -- last 2 clocks
-                    ProgDB <= OpADIW;
+                    ProgDB <= OpCALL;
                     wait for 20 ns;
                     ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
@@ -482,8 +482,16 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= OpADD;
                     wait for 20 ns;
 
-                    -- This should be executed
-                    ProgDB <= OpSUB;
+                    temp_op := OpSBRC;
+                    temp_op(2 downto 0) := "101";
+                    temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    ProgDB <= temp_op;
+                    wait for 20 ns;
+
+                    -- This should also be skipped, but over 2 clocks
+                    ProgDB <= OpJMP;
+                    wait for 20 ns;
+                    ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
 
                 --
@@ -525,8 +533,30 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
                     ProgDB <= OpADD;
                     wait for 20 ns;
 
-                    -- This should be executed
-                    ProgDB <= OpSUB;
+                    temp_op := OpSBRS;
+                    temp_op(2 downto 0) := "011";
+                    temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    ProgDB <= temp_op;
+                    wait for 20 ns;
+
+                    -- This should also be skipped, but over 2 clocks
+                    ProgDB <= OpLDS;
+                    wait for 20 ns;
+                    ProgDB <= rand_inptB & rand_inptA;
+                    wait for 20 ns;
+
+                    -- Just to make sure we catch the final edge case
+                    -- where we need to skip two clocks
+
+                    temp_op := OpSBRS;
+                    temp_op(2 downto 0) := "011";
+                    temp_op(8 downto 4) := '1' & rand_inptA(3 downto 0);
+                    ProgDB <= temp_op;
+                    wait for 20 ns;
+
+                    ProgDB <= OpSTS;
+                    wait for 20 ns;
+                    ProgDB <= rand_inptB & rand_inptA;
                     wait for 20 ns;
 
                 end if;
