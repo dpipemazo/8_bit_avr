@@ -171,7 +171,7 @@ begin
                     LastCycle => lastCycle,
                     ProgDB    => ProgDB,
                     DataDB    => DataDB,
-                    Registers => ALU_result,
+                    Registers => OperandA,
                     Status    => StatusReg,
                     ZeroLine  => result_zero,
                     clock     => clock,
