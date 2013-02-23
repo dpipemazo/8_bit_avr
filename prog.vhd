@@ -119,7 +119,8 @@ begin
                             (std_match(IR, OpBRBC) and     isBitSet) or
                             (std_match(IR, OpSBRS) and not isBitSet) or
                             (std_match(IR, OpSBRC) and     isBitSet) or
-                            (std_match(IR, OpCPSE) and ZeroLine = '0')) else
+                            (std_match(IR, OpCPSE) and ZeroLine = '0') or
+                            (SkipCmd and (not intrHas2Wrds) and CycleCnt = "01")) else
                   '0';
 
 
