@@ -139,8 +139,6 @@ signal adder_b_input : std_logic_vector(7 downto 0);
 signal adder_sub_input : std_logic;
 signal adder_carry_input : std_logic;
 
-signal natural_index : natural;
-
 -- begin the process
 begin
 
