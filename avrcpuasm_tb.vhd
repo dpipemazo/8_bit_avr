@@ -37,6 +37,7 @@ library work;
 use work.opcodes.all;
 use work.avr_cpu;
 use work.prog_memory;
+use work.data_memory;
 
 entity AVRCPU_tb is
 end AVRCPU_tb;
@@ -132,7 +133,7 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
       X"FFC0", X"FFC1", X"FFC0", X"FFFC"    -- LD/LDD
     );
 
-    constant SimpleJmpSize : integer := 18;
+    constant SimpleJmpSize : integer := 26;
 
     type SIMPLE_JMP_TYPE is array (0 to SimpleJmpSize) of std_logic_vector(7 downto 0);
 
@@ -141,12 +142,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
       X"5A",                      -- RJMP (Forwards)
       X"42",                      -- RJMP (Backwards)
       X"FF",                      -- IJMP
-      X"A5",                      -- CALL
-      X"A5",                      -- RCALL
-      X"36",                      -- ICALL
+      X"77", X"77", X"A5", -- CALL
+      X"77", X"77", X"A5", -- RCALL
+      X"77", X"77", X"A5", -- ICALL
       X"B0", X"B1", X"B2", X"B3", -- Branch Instructions
       X"B4", X"B5", X"B6", X"B7", -- Branch Instructions
-      X"36",                      -- ICALL
+      X"77", X"77", X"36", -- ICALL
       X"B8", X"B9",               -- More Branch Instructions
       X"42"                       -- Skip's all pass
     );
@@ -173,6 +174,14 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
             Reset  => Reset,
             ProgDB => ProgDB
 	 );
+
+    RAM : entity DATA_MEMORY
+         port map(
+            RE     => DataRd,
+            WE     => DataWr,
+            DataAB => DataAB,
+            DataDB => DataDB
+     );
 
     -- Make the interrupt lines high
     INT0 <= '1';
@@ -214,25 +223,29 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
         wait for  8 ns;
 
-        wait for 120 ns;
+        -- wait for 120 ns;
 
         for a in 0 to SimpleLoadSize loop
             
-            wait for 39 ns;
-            if (a <= 1) then
-                wait for 20 ns;
-            end if;
+            -- wait for 39 ns;
+            -- if (a <= 1) then
+            --     wait for 20 ns;
+            -- end if;
+            wait until (DataRd = '0');
             assert (DataAB = SimpleLoadArray(a))
             report "Failed a Load command"
             severity ERROR;
+            wait for 12 ns;
 
         end loop;
 
         for a in 0 to SimpleJmpSize loop
             wait until (DataWr = '0');
-            assert (DataDB = SimpleJmpArray(a))
-            report "Failed a jmp command"
-            severity ERROR;
+            if not (SimpleJmpArray(a) = X"77") then
+                assert (DataDB = SimpleJmpArray(a))
+                report "Failed a jmp command"
+                severity ERROR;
+            end if;
             wait for 12 ns;
         end loop;
 

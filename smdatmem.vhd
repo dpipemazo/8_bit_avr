@@ -99,7 +99,7 @@ begin
 	end if;
 
 	-- now check if writing
-	if  (WE'event and (WE = '1'))  then
+	if  (WE'event and (WE = '0'))  then
 	    -- rising edge of write - write the data (check which address range)
 	    if  (CONV_INTEGER(DataAB) < 128)  then
  	        RAMbits0000(CONV_INTEGER(DataAB)) <= DataDB;

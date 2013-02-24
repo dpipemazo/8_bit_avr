@@ -141,7 +141,7 @@ Start:					; start of the test code
 	AND	R0, R31			; 80  3F  00  11010101
 	ST 	X, R0			; Check Store = 00
 	BLD	R0, 7			; 00  XX  80  11111111
-	
+
 
 					;OpA OpB Res    Flags
 	ANDI	R28, 0xFF		; 55  FF  55  11000001
@@ -201,6 +201,7 @@ Start:					; start of the test code
 	ST 	X, R17			; Check Store = FE
 
 	MOV	R17, R28
+	LDI     R29, 0xAA
 					;OpA OpB Res    Flags
 	EOR	R17, R29		; 55  AA  FF  11010101
 	ST 	X, R17			; Check Store = FF
@@ -217,14 +218,15 @@ Start:					; start of the test code
 	INC	R24			; 00  XX  01  11000001
 	ST 	X, R24			; Check Store = 01
 	INC	R22			; FE  XX  FF  11000011
-	ST 	X, R23			; Check Store = FF
+	ST 	X, R22			; Check Store = FF
 	INC	R22			; FF  XX  00  11000011
-	ST 	X, R23			; Check Store = 00
+	ST 	X, R22			; Check Store = 00
 	INC	R0			; 7F  XX  80  11001101
 	ST 	X, R0			; Check Store = 80
 
 	DEC	R26
 	LDI	R31, 0x80
+	LDI     R30, 0x70
 					;OpA OpB Res    Flags
 	LSR	R26			; FF  XX  7F  11011001
 	ST 	X, R26			; Check Store = 7F
@@ -282,6 +284,7 @@ Start:					; start of the test code
 
 	LDI	R25, 0x7F
 	LDI	R24, 0x71
+	LDI     R26, 0x00
 					;OpA OpB Res    Flags
 	SBCI	R26, 0x7F		; 00  7F  80  11110101
 	ST 	X, R26			; Check Store = 80
