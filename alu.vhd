@@ -320,7 +320,7 @@ begin
                                 -- Carry flag always set on these instructions
                                '1' when( (std_match(IR, OpBSET) and std_match(IR(6 downto 4), "000")) or
                                           std_match(IR, OpCOM) or 
-                                         (std_match(IR, OpNEG) and (result_zero = '1') )) else
+                                         (std_match(IR, OpNEG) and (result_zero = '0') )) else
 
                                 -- Carry flag never set on these instructions
                                '0' when( (std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "000")) or

@@ -100,12 +100,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
       X"FF", X"7D",                      -- ORI command
       X"FF", X"B8", X"00", X"C0", X"00", -- ROR command
       X"01", X"DF", X"7E",               -- SBC/SBCI
-      X"80", X"7F", X"D0",               -- SBC/SBCI
+      X"81", X"7F", X"D0",               -- SBC/SBCI
       X"FD", X"FF", X"FD", X"FF",        -- SBIW command
       X"02", X"80", X"7F",               -- SUB command
       X"81", X"E0", X"D1",               -- SUBI command
       X"28", X"E7", X"00",               -- SWAP command
-      X"80",X"00",X"55",X"D5",X"E0",X"D1"-- PUSH command
+      X"81",X"00",X"55",X"AA",X"E0",X"D1"-- PUSH command
     );
 
     constant SimpleAddrSize : integer := 25;

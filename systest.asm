@@ -287,7 +287,7 @@ Start:					; start of the test code
 	LDI     R26, 0x00
 					;OpA OpB Res    Flags
 	SBCI	R26, 0x7F		; 00  7F  80  11110101
-	ST 	X, R26			; Check Store = 80
+	ST 	X, R26			; Check Store = 81
 	SBC	R25, R17		; 7F  FF  7F  11100001
 	ST 	X, R25			; Check Store = 7F
 	SBCI	R24, 0xA0		; 71  A0  D0  11001101
@@ -334,10 +334,10 @@ Start:					; start of the test code
 	ST 	X, R27			; Check Store = 00
 
 
-	PUSH	R26			; store address registers Push = 80
+	PUSH	R26			; store address registers Push = 81
 	PUSH	R27			; Push = 00
 	PUSH	R28			; Push = 55
-	PUSH	R29			; Push = D5
+	PUSH	R29			; Push = AA
 	PUSH	R30			; Push = E0
 	PUSH	R31			; Push = D1
 
