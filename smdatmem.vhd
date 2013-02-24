@@ -1,3 +1,15 @@
+
+
+--
+-- We changed this code such that writes occur on the falling edge of clocks
+-- even though our data is held valid until the rising edge of the next clock
+-- this entity would grab the Address bus and Data bus values from the next
+-- clock, which in a real system wouldn't be an issue since the memory's 
+-- output should be valid based only values that were valid when the write
+-- signal was low. Not the value right after the write signal goes high.
+--
+
+
 ----------------------------------------------------------------------------
 --
 --  Atmel AVR Data Memory (Small Version)
@@ -17,6 +29,7 @@
 --      7 May 02  Glen George       Added checks for addresses out of range
 --                                  and updated the comments.
 --     23 Jan 06  Glen George       Updated comments.
+--     23 Feb 06  Sean Keenan       Changed Write to occur on falling edge
 --
 ----------------------------------------------------------------------------
 

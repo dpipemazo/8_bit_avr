@@ -1,6 +1,8 @@
 ; This is the testcode for Homework #5.  It is in AVR assembly so
 ; that it will be easy to generate the actual testcode.  It was assembled
-; targetting an ATMega16.
+; targetting an ATMega16. This file has been augmented to load registers
+; after many commands so that we know that operations are occuring properly
+; even if we only have access to the Data/Address bus's. 
 ;
 ;
 ; Revision History
@@ -13,6 +15,7 @@
 ;     7/27/00  Glen George	Added instructions for Homework #5 (jumps,
 ;                               calls, etc.).
 ;     5/16/04  Glen George	Added more testing and updated comments.
+;     2/22/13  Sean Keenan	Overhauled code to include LD commands + fixed bugs
 
 
 Start:					; start of the test code

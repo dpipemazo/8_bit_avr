@@ -40,7 +40,6 @@ entity  PROG  is
         clock     :  in  std_logic;
         reset     :  in  std_logic;
         ProgAB    :  out std_logic_vector(15 downto 0); -- Program Address Bus (PC)
-        -- ProgToWr  :  out std_logic_vector(7 downto 0);  -- Data to write to Memory
         GetNextIR :  buffer std_logic;                     -- Signal to get next IR
         PC        :  buffer std_logic_vector(15 downto 0); -- PC for other entities to use
         constantPC:  buffer std_logic_vector(15 downto 0)

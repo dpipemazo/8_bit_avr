@@ -7,25 +7,16 @@
 --
 --  AVR_CPU
 --
---  This is the complete entity declaration for the AVR CPU.  It is used to
---  test the complete design.
+--  This is the test bench that works with the systest.asm code
+--  It makes sure that writes and reads occur with specific values
+--  at specific points in the code, that way we know that instructions
+--  are excuting properly, JMP's are going to the right places, ect.
 --
---  Inputs:
---    ProgDB - program memory data bus (16 bits)
---    Reset  - active low reset signal
---    INT0   - active low interrupt
---    INT1   - active low interrupt
---    clock  - the system clock
 --
---  Outputs:
---    ProgAB - program memory address bus (16 bits)
---    DataAB - data memory address bus (16 bits)
---    DataWr - data write signal
---    DataRd - data read signal
---
---  Inputs/Outputs:
---    DataDB - data memory data bus (8 bits)
---
+--  REVISION HISTORY
+--      2/21/13 Sean Keenan   Initial Revision
+--      2/23/13 Sean Keenan   Killed some bugs
+---------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -223,14 +214,8 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
 
         wait for  8 ns;
 
-        -- wait for 120 ns;
-
         for a in 0 to SimpleLoadSize loop
             
-            -- wait for 39 ns;
-            -- if (a <= 1) then
-            --     wait for 20 ns;
-            -- end if;
             wait until (DataRd = '0');
             assert (DataAB = SimpleLoadArray(a))
             report "Failed a Load command"
