@@ -11,7 +11,7 @@
 --  different blocks in our system:
 --
 --  Adder Block : ADD, ADC, SUB, SUBC, ADIW, SBIW, SUBI, NEG, DEC, INC, COM, 
---                CP, CPC, CPI, SBCI
+--                CP, CPC, CPI, SBCI, CPSE
 --
 --  This block consists of one 8-bit adder(/subtracter). With relatively
 --  straightforward wiring for ADD/ADC/SUB/SUBC/CP/CPC/CPI. It differs
@@ -78,6 +78,7 @@
 --     Jan 31 13    Dan Pipe-Mazo   Comments + debugging 
 --     Jan 31 13    Sean Keenan     Comments + debugging
 --      Feb 7 13    Dan and Sean    Updated for new control unit and LDI
+--      Feb 23 13   Dan Pipe-Mazo   Trimmed some fat for optimization
 --
 ----------------------------------------------------------------------------
     
@@ -158,7 +159,7 @@ begin
 
     --
     -- INSTRUCTIONS: ADD, ADC, SUB, SUBC, ADIW, SBIW, SUBI, NEG, DEC, INC, COM, 
-    --               CP, CPC, CPI, SBCI, LDI
+    --               CP, CPC, CPI, SBCI, LDI, CPSE
     --
 
     -- Wire up the alu adder unit. This unit is able to perform
@@ -175,11 +176,11 @@ begin
 
     -- Map the correct input to the adder
     adder_a_input <= not OperandA when ( std_match(IR, OpNEG) or std_match(IR, OpCOM)) else
-                    "00000000" when (std_match(IR, OpLDI)) else
+                     "00000000"       when ( std_match(IR, OpLDI)) else
                      OperandA;
 
 
-    adder_b_input <= "00000000" when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and std_match(cycle_cnt, "01")) or
+    adder_b_input <= "00000000"     when (((std_match(IR, OpADIW) or std_match(IR, OpSBIW)) and std_match(cycle_cnt, "01")) or
                                         std_match(IR, OpINC) or std_match(IR, OpDEC) or 
                                         std_match(IR, OpNEG) or std_match(IR, OpCOM)) else
                      internal_op_b;
@@ -319,18 +320,21 @@ begin
                                 -- Carry flag always set on these instructions
                                '1' when( (std_match(IR, OpBSET) and std_match(IR(6 downto 4), "000")) or
                                           std_match(IR, OpCOM) or 
-                                         (std_match(IR, OpNEG) and not std_match(result, "00000000"))) else
+                                         (std_match(IR, OpNEG) and (result_zero = '1') )) else
 
                                 -- Carry flag never set on these instructions
                                '0' when( (std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "000")) or
                                          std_match(IR, OpNEG)) else
 
                                -- Else, just hold state
-                               internal_status_reg(0);
+                               StatReg(0);
 
     --
     -- ZERO FLAG
     --
+
+    -- Need to make this a line which we can pipe out to the Program Unit
+    --  in order to be able to skip on a CPSE. 
     result_zero <= not OR_REDUCE(Result);
 
     internal_status_reg(1) <=   -- Set on a bitset
@@ -374,7 +378,7 @@ begin
                                                                     std_match(IR, OpADIW) or
                                                                     std_match(IR, OpSBIW)))) else
                                 -- Else, hold state
-                                internal_status_reg(1);
+                                StatReg(1);
 
     --
     -- NEGATIVE FLAG
@@ -411,32 +415,30 @@ begin
                                                                 std_match(IR, OpSUB ) or
                                                                 std_match(IR, OpSUBI) ) else
                                 -- else, hold state. 
-                                internal_status_reg(2);
+                                StatReg(2);
 
     --
     -- SIGNED OVERFLOW FLAG
     --
     internal_status_reg(3) <=   -- Set on a bitset
                                 '1' when( std_match(IR, OpBSET) and std_match(IR(6 downto 4), "011") ) else
-                                
-                                -- clear on a bitclear
-                                '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "011") ) else
-                                
+
+                                -- These instructions always clear the signed
+                                --  overflow flag
+                                '0' when(   ( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "011") ) or 
+                                                std_match(IR, OpAND) or 
+                                                std_match(IR, OpANDI) or
+                                                std_match(IR, OpCOM) or
+                                                std_match(IR, OpEOR) or
+                                                std_match(IR, OpOR) or
+                                                std_match(IR, OpORI)) else
+
                                 -- If we are doing a shift, perform an XOR of 
                                 --  the carry flag and the negative flag
                                 internal_status_reg(2) xor internal_status_reg(0) when(
                                                 std_match(IR, OpROR) or
                                                 std_match(IR, OpASR) or
                                                 std_match(IR, OpLSR)) else
-
-                                -- These instructions always clear the signed
-                                --  overflow flag
-                                '0' when(       std_match(IR, OpAND) or 
-                                                std_match(IR, OpANDI) or
-                                                std_match(IR, OpCOM) or
-                                                std_match(IR, OpEOR) or
-                                                std_match(IR, OpOR) or
-                                                std_match(IR, OpORI)) else
 
                                 -- For an add instruction, perform the 
                                 --  xor of the carry into and out of bit 7
@@ -467,7 +469,7 @@ begin
                                                 std_match(IR, OpSBCI)) else
 
                                 -- Else, hold state
-                                internal_status_reg(3);
+                                StatReg(3);
 
     --
     -- SIGN BIT
@@ -506,7 +508,7 @@ begin
                                                 std_match(IR, OpSUBI) ) else
 
                                 -- Else, hold state
-                                internal_status_reg(4);
+                                StatReg(4);
 
     --
     -- HALF CARRY
@@ -533,7 +535,7 @@ begin
                             '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "101") ) else
 
                             -- Else, hold state
-                            internal_status_reg(5);
+                            StatReg(5);
     --
     -- INSTRUCTIONS: BST
     --
@@ -548,7 +550,7 @@ begin
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "110") ) else
 
                                 -- Else, hold state
-                                internal_status_reg(6);   
+                                StatReg(6);   
 
     --
     -- INTERRUPT BIT
@@ -561,7 +563,7 @@ begin
                                 '0' when( std_match(IR, OpBCLR) and std_match(IR(6 downto 4), "111") ) else
                                   
                                 -- Else, hold state
-                                internal_status_reg(7);           
+                                StatReg(7);           
 
 
     -- Clock the internal result to the external result on clock edges
@@ -582,7 +584,8 @@ end behavioral;
 
 
 -- --
--- -- Define the testable ALU entity
+-- -- Define the testable ALU entity (Commented out for full implementation of entire
+-- -- AVR CPU. Uncomment to run ALU_tb)
 -- --
 -- library ieee;
 -- use ieee.std_logic_1164.all;

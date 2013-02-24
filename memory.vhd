@@ -401,7 +401,8 @@ begin
 end memoryBehavior;
 
 --
--- Now declare the testable memory unit
+-- Now declare the testable memory unit (Commented out for full implementation of entire
+-- AVR CPU. Uncomment to run mem_tb)
 --
 
 -- library ieee;
