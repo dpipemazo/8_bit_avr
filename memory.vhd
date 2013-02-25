@@ -285,7 +285,7 @@ begin
 
         if (rising_edge(clock)) then
             -- Use the adder for most memory access instructions
-            if (std_match(CycleCnt, "00") and not (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
+            if (std_match(CycleCnt, "00")) then --and not (std_match(IR, OpSTS) or std_match(IR, OpLDS))) then
                     latchedAddr <= AdderResult;
             end if;
 
@@ -314,7 +314,7 @@ begin
 --
 
     -- Tri-state the bus when we are not writing to it.    
-    DataDB  <=  RegA when( (    std_match(CycleCnt, "01") and(
+    DataDB  <=  RegA when(     --std_match(CycleCnt, "01") and(
                                 std_match(IR, OpSTX)  or
                                 std_match(IR, OpSTXI) or
                                 std_match(IR, OpSTXD) or
@@ -324,9 +324,9 @@ begin
                                 std_match(IR, OpSTZD) or
                                 std_match(IR, OpSTDY) or
                                 std_match(IR, OpSTDZ) or 
-                                std_match(IR, OpPUSH))) or 
-                               (std_match(CycleCnt, "10") and
-                                std_match(IR, OpSTS) ) ) else
+                                std_match(IR, OpPUSH) or 
+                               --(std_match(CycleCnt, "10") and
+                                std_match(IR, OpSTS)  ) else
                 PC(15 downto 8) when( 
                                (std_match(CycleCnt, "00") and (
                                 std_match(IR, OpRCALL) or 

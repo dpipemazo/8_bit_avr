@@ -244,15 +244,30 @@ begin
     --
     -- INSTRUCTION: BSET
     --
+    bitset_result(0) =  '1' when std_match(IR(2 downto 0), "000") else
+                        OperandA(0);
 
-    bitset_result   <= OperandA(7 downto 1) & StatReg(6)                        when (std_match(IR(2 downto 0), "000")) else
-                       OperandA(7 downto 2) & StatReg(6) & OperandA(0)          when (std_match(IR(2 downto 0), "001")) else
-                       OperandA(7 downto 3) & StatReg(6) & OperandA(1 downto 0) when (std_match(IR(2 downto 0), "010")) else
-                       OperandA(7 downto 4) & StatReg(6) & OperandA(2 downto 0) when (std_match(IR(2 downto 0), "011")) else
-                       OperandA(7 downto 5) & StatReg(6) & OperandA(3 downto 0) when (std_match(IR(2 downto 0), "100")) else
-                       OperandA(7 downto 6) & StatReg(6) & OperandA(4 downto 0) when (std_match(IR(2 downto 0), "101")) else
-                                OperandA(7) & StatReg(6) & OperandA(5 downto 0) when (std_match(IR(2 downto 0), "110")) else
-                                              StatReg(6) & OperandA(6 downto 0); --when (std_match(IR(2 downto 0), "111"))
+    bitset_result(1) =  '1' when std_match(IR(2 downto 0), "001") else
+                        OperandA(1);
+
+    bitset_result(2) =  '1' when std_match(IR(2 downto 0), "010") else
+                        OperandA(2);
+
+    bitset_result(3) =  '1' when std_match(IR(2 downto 0), "011") else
+                        OperandA(3);
+
+    bitset_result(4) =  '1' when std_match(IR(2 downto 0), "100") else
+                        OperandA(4);
+
+    bitset_result(5) =  '1' when std_match(IR(2 downto 0), "101") else
+                        OperandA(5);
+
+    bitset_result(6) =  '1' when std_match(IR(2 downto 0), "110") else
+                        OperandA(6);
+
+    bitset_result(7) =  '1' when std_match(IR(2 downto 0), "111") else
+                        OperandA(7);
+
 
     --
     -- MAP INDIVIDUAL RESULTS TO INTERNAL RESULT IN MUX
