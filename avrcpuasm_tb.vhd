@@ -133,12 +133,12 @@ architecture  TB_AVR_CPU  of AVRCPU_tb is
       X"5A",                      -- RJMP (Forwards)
       X"42",                      -- RJMP (Backwards)
       X"FF",                      -- IJMP
-      X"77", X"77", X"A5", -- CALL
-      X"77", X"77", X"A5", -- RCALL
-      X"77", X"77", X"A5", -- ICALL
+      X"77", X"77", X"A5",        -- CALL
+      X"77", X"77", X"A5",        -- RCALL
+      X"77", X"77", X"A5",        -- ICALL
       X"B0", X"B1", X"B2", X"B3", -- Branch Instructions
       X"B4", X"B5", X"B6", X"B7", -- Branch Instructions
-      X"77", X"77", X"36", -- ICALL
+      X"77", X"77", X"36",        -- ICALL
       X"B8", X"B9",               -- More Branch Instructions
       X"42"                       -- Skip's all pass
     );
